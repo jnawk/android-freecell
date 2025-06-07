@@ -47,6 +47,16 @@ class FreecellGameView @JvmOverloads constructor(
         textSize = 30f // Will be adjusted based on card size
         textAlign = Paint.Align.CENTER
     }
+    
+    // Small text paints for card corners
+    private val smallTextPaint = Paint().apply {
+        color = Color.BLACK
+        textAlign = Paint.Align.LEFT
+    }
+    private val smallRedTextPaint = Paint().apply {
+        color = Color.RED
+        textAlign = Paint.Align.LEFT
+    }
 
     // Dynamic dimensions that will be calculated based on screen size
     private var cardWidth = 0f
@@ -121,12 +131,14 @@ class FreecellGameView @JvmOverloads constructor(
         // Standard card ratio is 2.5:3.5 (width:height)
         cardHeight = cardWidth * 1.4f
 
-        // Adjust tableau card offset based on card height
-        tableauCardOffset = cardHeight * 0.22f
+        // Increase the offset to show more of each card in the tableau
+        tableauCardOffset = cardHeight * 0.4f
 
         // Adjust text sizes based on card dimensions
-        textPaint.textSize = cardWidth * 0.25f
-        redTextPaint.textSize = cardWidth * 0.25f
+        textPaint.textSize = cardWidth * 0.4f  // Larger main text
+        redTextPaint.textSize = cardWidth * 0.4f
+        smallTextPaint.textSize = cardWidth * 0.15f  // Small corner text
+        smallRedTextPaint.textSize = cardWidth * 0.15f
     }
 
     init {
@@ -316,18 +328,28 @@ class FreecellGameView @JvmOverloads constructor(
         canvas.drawRect(x, y, x + cardWidth, y + cardHeight, cardBackgroundPaint)
         canvas.drawRect(x, y, x + cardWidth, y + cardHeight, cardBorderPaint)
 
-        // Determine text paint based on suit color
+        // Determine text paints based on suit color
         val currentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
             redTextPaint
         } else {
             textPaint
         }
+        
+        val smallCurrentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
+            smallRedTextPaint
+        } else {
+            smallTextPaint
+        }
 
-        // Draw rank and suit (simple representation)
-        // Adjust y-offset for text to be somewhat centered.
+        // Draw main rank and suit in center (larger)
         val textX = x + cardWidth / 2
-        val textY = y + cardHeight / 2 + currentTextPaint.textSize / 3 // Small adjustment for better vertical centering
+        val textY = y + cardHeight / 2 + currentTextPaint.textSize / 3
         canvas.drawText(card.toString(), textX, textY, currentTextPaint)
+        
+        // Draw small rank and suit in top-left corner
+        val cornerX = x + padding / 2
+        val cornerY = y + smallCurrentTextPaint.textSize
+        canvas.drawText(card.toString(), cornerX, cornerY, smallCurrentTextPaint)
     }
 
     /**
