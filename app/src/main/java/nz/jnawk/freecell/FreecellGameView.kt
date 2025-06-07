@@ -87,8 +87,14 @@ class FreecellGameView @JvmOverloads constructor(
         FREE_CELL, FOUNDATION, TABLEAU
     }
     
+    // Define card sources
+    private enum class CardSource {
+        TABLEAU, FREE_CELL
+    }
+    
     // Track the currently dragged card
     private var draggedCard: Card? = null
+    private var draggedCardSource: CardSource = CardSource.TABLEAU
     private var draggedCardOriginalPile: Int = -1
     private var draggedCardOriginalIndex: Int = -1
 
@@ -364,6 +370,22 @@ class FreecellGameView @JvmOverloads constructor(
         return null
     }
     
+    // Find which card was touched in the free cells
+    private fun findTouchedFreeCell(touchX: Float, touchY: Float): Pair<Card, Int>? {
+        for (i in 0 until 4) {
+            val x = padding + i * (cardWidth + padding)
+            val y = padding + topMargin
+            
+            val card = gameEngine.gameState.freeCells[i] ?: continue
+            
+            if (touchX >= x && touchX <= x + cardWidth &&
+                touchY >= y && touchY <= y + cardHeight) {
+                return Pair(card, i)
+            }
+        }
+        return null
+    }
+
     // Find valid destinations for the currently dragged card
     private fun findValidDestinations() {
         // Clear previous valid destinations
@@ -550,14 +572,15 @@ class FreecellGameView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 val touchedCard = findTouchedTableauCard(event.x, event.y)
                 if (touchedCard != null) {
-                    // Start dragging
+                    // Start dragging from tableau
                     draggedCard = touchedCard.card
+                    draggedCardSource = CardSource.TABLEAU
                     draggedCardOriginalPile = touchedCard.pileIndex
                     draggedCardOriginalIndex = touchedCard.cardIndex
-                    
+
                     // Calculate original position for animation
                     draggedCardOriginalX = padding + touchedCard.pileIndex * (cardWidth + padding)
-                    draggedCardOriginalY = (padding + cardHeight + padding * 2) +
+                    draggedCardOriginalY = (padding + cardHeight + padding * 2 + topMargin) +
                                          (touchedCard.cardIndex * tableauCardOffset)
                     
                     // Find valid destinations for this card
@@ -581,6 +604,43 @@ class FreecellGameView @JvmOverloads constructor(
                     
                     invalidate()
                     return true
+                } else {
+                    // Check if we're touching a free cell
+                    val touchedFreeCell = findTouchedFreeCell(event.x, event.y)
+                    if (touchedFreeCell != null) {
+                        val (card, cellIndex) = touchedFreeCell
+                        
+                        // Start dragging from free cell
+                        draggedCard = card
+                        draggedCardSource = CardSource.FREE_CELL
+                        draggedCardOriginalPile = cellIndex
+                        draggedCardOriginalIndex = -1 // Not used for free cells
+                        
+                        // Calculate original position for animation
+                        draggedCardOriginalX = padding + cellIndex * (cardWidth + padding)
+                        draggedCardOriginalY = padding + topMargin
+                        
+                        // Find valid destinations for this card
+                        findValidDestinations()
+                        
+                        // Reset hovered destination
+                        hoveredDestinationType = null
+                        hoveredDestinationIndex = -1
+                        
+                        // Tell the drag layer to start dragging
+                        dragLayer?.let {
+                            it.startDrag(
+                                card,
+                                event.rawX,
+                                event.rawY,
+                                cardWidth,
+                                cardHeight
+                            )
+                        }
+                        
+                        invalidate()
+                        return true
+                    }
                 }
             }
             
@@ -613,23 +673,30 @@ class FreecellGameView @JvmOverloads constructor(
                     // Check if we're hovering over a valid destination
                     if (hoveredDestinationType != null && hoveredDestinationIndex != -1) {
                         // Try to move the card to the destination
-                        val moved = when (hoveredDestinationType) {
-                            DestinationType.FREE_CELL -> 
+                        val moved = when {
+                            draggedCardSource == CardSource.TABLEAU && hoveredDestinationType == DestinationType.FREE_CELL ->
                                 gameEngine.moveFromTableauToFreeCell(draggedCardOriginalPile, hoveredDestinationIndex)
-                            
-                            DestinationType.FOUNDATION -> {
+
+                            draggedCardSource == CardSource.TABLEAU && hoveredDestinationType == DestinationType.FOUNDATION -> {
                                 val suit = Suit.values()[hoveredDestinationIndex]
                                 gameEngine.moveFromTableauToFoundation(draggedCardOriginalPile, suit)
                             }
-                            
-                            DestinationType.TABLEAU -> {
-                                gameEngine.moveFromTableauToTableau(
-                                    draggedCardOriginalPile,
-                                    hoveredDestinationIndex
-                                )
-                            }
 
-                            null -> false
+                            draggedCardSource == CardSource.TABLEAU && hoveredDestinationType == DestinationType.TABLEAU ->
+                                gameEngine.moveFromTableauToTableau(draggedCardOriginalPile, hoveredDestinationIndex)
+                                
+                            draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.TABLEAU ->
+                                gameEngine.moveFromFreeCellToTableau(draggedCardOriginalPile, hoveredDestinationIndex)
+                                
+                            draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.FOUNDATION -> {
+                                val suit = Suit.values()[hoveredDestinationIndex]
+                                gameEngine.moveFromFreeCellToFoundation(draggedCardOriginalPile, suit)
+                            }
+                            
+                            draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.FREE_CELL ->
+                                gameEngine.moveFromFreeCellToFreeCell(draggedCardOriginalPile, hoveredDestinationIndex)
+                                
+                            else -> false
                         }
                         
                         if (moved) {

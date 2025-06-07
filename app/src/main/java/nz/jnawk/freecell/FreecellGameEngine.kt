@@ -142,6 +142,55 @@ class FreecellGameEngine {
         
         return false
     }
+    
+    /**
+     * Move a card from a free cell to a tableau pile.
+     */
+    fun moveFromFreeCellToTableau(fromCellIndex: Int, toPileIndex: Int): Boolean {
+        val card = gameState.freeCells[fromCellIndex] ?: return false
+        val toPile = gameState.tableauPiles[toPileIndex]
+        
+        if (canMoveToTableau(card, toPile.lastOrNull())) {
+            gameState.freeCells[fromCellIndex] = null
+            toPile.add(card)
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Move a card from a free cell to a foundation pile.
+     */
+    fun moveFromFreeCellToFoundation(fromCellIndex: Int, toFoundationSuit: Suit): Boolean {
+        val card = gameState.freeCells[fromCellIndex] ?: return false
+        
+        if (canMoveToFoundation(card, gameState.foundationPiles[toFoundationSuit])) {
+            gameState.freeCells[fromCellIndex] = null
+            // Add to foundation pile
+            val foundationPile = gameState.foundationPiles[toFoundationSuit]
+            if (foundationPile == null) {
+                gameState.foundationPiles[toFoundationSuit] = mutableListOf(card)
+            } else {
+                foundationPile.add(card)
+            }
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Move a card from one free cell to another.
+     */
+    fun moveFromFreeCellToFreeCell(fromCellIndex: Int, toCellIndex: Int): Boolean {
+        val card = gameState.freeCells[fromCellIndex] ?: return false
+        
+        if (gameState.freeCells[toCellIndex] == null) {
+            gameState.freeCells[fromCellIndex] = null
+            gameState.freeCells[toCellIndex] = card
+            return true
+        }
+        return false
+    }
 
     /**
      * Placeholder for checking the win condition.
