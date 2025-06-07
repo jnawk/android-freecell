@@ -54,6 +54,19 @@ class FreecellGameView @JvmOverloads constructor(
     private var padding = 0f
     private var tableauCardOffset = 0f
     
+    // Highlight paint for valid destinations
+    private val highlightPaint = Paint().apply {
+        color = Color.YELLOW
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        alpha = 180
+    }
+    
+    // Track valid destinations for the currently dragged card
+    private val validFreeCellIndices = mutableListOf<Int>()
+    private val validFoundationIndices = mutableListOf<Int>()
+    private val validTableauIndices = mutableListOf<Int>()
+    
     // Track the currently dragged card
     private var draggedCard: Card? = null
     private var draggedCardOriginalPile: Int = -1
@@ -145,7 +158,46 @@ class FreecellGameView @JvmOverloads constructor(
         drawFoundationPiles(canvas)
         drawTableauPiles(canvas)
         
+        // Draw highlights for valid destinations
+        drawValidDestinationHighlights(canvas)
+        
         // Don't draw the dragged card here - it's drawn in the drag layer
+    }
+    
+    private fun drawValidDestinationHighlights(canvas: Canvas) {
+        // Only draw highlights if a card is being dragged
+        if (draggedCard == null) return
+        
+        // Highlight valid free cells
+        for (index in validFreeCellIndices) {
+            val x = padding + index * (cardWidth + padding)
+            val y = padding
+            canvas.drawRect(x - 2, y - 2, x + cardWidth + 2, y + cardHeight + 2, highlightPaint)
+        }
+        
+        // Highlight valid foundation piles
+        val suitsOrder = Suit.values()
+        for (index in validFoundationIndices) {
+            val x = padding + (4 * (cardWidth + padding)) + index * (cardWidth + padding)
+            val y = padding
+            canvas.drawRect(x - 2, y - 2, x + cardWidth + 2, y + cardHeight + 2, highlightPaint)
+        }
+        
+        // Highlight valid tableau piles
+        for (index in validTableauIndices) {
+            val pile = gameEngine.gameState.tableauPiles[index]
+            val x = padding + index * (cardWidth + padding)
+            val y = padding + cardHeight + padding * 2
+            
+            if (pile.isEmpty()) {
+                // Empty tableau pile
+                canvas.drawRect(x - 2, y - 2, x + cardWidth + 2, y + cardHeight + 2, highlightPaint)
+            } else {
+                // Non-empty tableau pile - highlight the bottom card
+                val lastCardY = y + (pile.size - 1) * tableauCardOffset
+                canvas.drawRect(x - 2, lastCardY - 2, x + cardWidth + 2, lastCardY + cardHeight + 2, highlightPaint)
+            }
+        }
     }
 
     private fun drawFreeCells(canvas: Canvas) {
@@ -286,6 +338,47 @@ class FreecellGameView @JvmOverloads constructor(
         return null
     }
     
+    // Find valid destinations for the currently dragged card
+    private fun findValidDestinations() {
+        // Clear previous valid destinations
+        validFreeCellIndices.clear()
+        validFoundationIndices.clear()
+        validTableauIndices.clear()
+        
+        val card = draggedCard ?: return
+        
+        // Check free cells
+        if (gameEngine.canMoveToFreeCell(gameEngine.gameState.freeCells)) {
+            for (i in gameEngine.gameState.freeCells.indices) {
+                if (gameEngine.gameState.freeCells[i] == null) {
+                    validFreeCellIndices.add(i)
+                }
+            }
+        }
+        
+        // Check foundation piles
+        val suitsOrder = Suit.values()
+        for (i in suitsOrder.indices) {
+            val suit = suitsOrder[i]
+            val foundationPile = gameEngine.gameState.foundationPiles[suit]
+            if (gameEngine.canMoveToFoundation(card, foundationPile)) {
+                validFoundationIndices.add(i)
+            }
+        }
+        
+        // Check tableau piles
+        for (i in gameEngine.gameState.tableauPiles.indices) {
+            // Skip the pile the card is coming from
+            if (i == draggedCardOriginalPile) continue
+            
+            val pile = gameEngine.gameState.tableauPiles[i]
+            val topCard = pile.lastOrNull()
+            if (gameEngine.canMoveToTableau(card, topCard)) {
+                validTableauIndices.add(i)
+            }
+        }
+    }
+    
     // Animate the card returning to its original position
     private fun animateCardReturn() {
         val startX = dragX
@@ -307,6 +400,11 @@ class FreecellGameView @JvmOverloads constructor(
                 draggedCard = null
                 draggedCardOriginalPile = -1
                 draggedCardOriginalIndex = -1
+                
+                // Clear valid destinations
+                validFreeCellIndices.clear()
+                validFoundationIndices.clear()
+                validTableauIndices.clear()
             }
             
             // Force redraw of the entire view
@@ -337,6 +435,9 @@ class FreecellGameView @JvmOverloads constructor(
                     draggedCardOriginalX = padding + touchedCard.pileIndex * (cardWidth + padding)
                     draggedCardOriginalY = (padding + cardHeight + padding * 2) + 
                                          (touchedCard.cardIndex * tableauCardOffset)
+                    
+                    // Find valid destinations for this card
+                    findValidDestinations()
                     
                     // Tell the drag layer to start dragging
                     dragLayer?.let {
@@ -377,6 +478,12 @@ class FreecellGameView @JvmOverloads constructor(
                         draggedCard = null
                         draggedCardOriginalPile = -1
                         draggedCardOriginalIndex = -1
+                        
+                        // Clear valid destinations
+                        validFreeCellIndices.clear()
+                        validFoundationIndices.clear()
+                        validTableauIndices.clear()
+                        
                         invalidate()
                     }
                     return true

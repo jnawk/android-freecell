@@ -40,25 +40,40 @@ class FreecellGameEngine {
     // --- We will add move validation and execution methods later ---
 
     /**
-     * Placeholder for checking if a card can be moved from a source
-     * (tableau or freecell) to a destination tableau pile.
-     * This will need to know about the source and destination.
+     * Check if a card can be moved to a destination tableau pile.
      */
     fun canMoveToTableau(cardToMove: Card, destinationPileTopCard: Card?): Boolean {
-        // TODO: Implement actual Freecell tableau move validation logic
-        // Rule: Must be opposite color and rank must be one less than destination.
-        // If destinationPileTopCard is null (empty tableau), any card can be moved.
-        return true // Placeholder - REMOVE THIS
+        // If destination pile is empty, Kings can be moved there
+        if (destinationPileTopCard == null) {
+            return cardToMove.rank == Rank.KING
+        }
+
+        // Card must be opposite color and one rank lower than the destination card
+        return cardToMove.isOppositeColor(destinationPileTopCard) &&
+               cardToMove.rank.value == destinationPileTopCard.rank.value - 1
     }
 
     /**
-     * Placeholder for checking if a card can be moved to a foundation pile.
+     * Check if a card can be moved to a foundation pile.
      */
-    fun canMoveToFoundation(cardToMove: Card, foundationSuit: Suit): Boolean {
-        // TODO: Implement actual Freecell foundation move validation logic
-        // Rule: Must be an Ace if foundation is empty,
-        // or same suit and rank one higher than current foundation top.
-        return true // Placeholder - REMOVE THIS
+    fun canMoveToFoundation(cardToMove: Card, foundationPile: List<Card>?): Boolean {
+        // If foundation is empty, only Ace can be placed
+        if (foundationPile.isNullOrEmpty()) {
+            return cardToMove.rank == Rank.ACE
+        }
+
+        // Card must be same suit and one rank higher than the top card
+        val topCard = foundationPile.last()
+        return cardToMove.suit == topCard.suit &&
+               cardToMove.rank.value == topCard.rank.value + 1
+    }
+
+    /**
+     * Check if a card can be moved to a free cell.
+     */
+    fun canMoveToFreeCell(freeCells: Array<Card?>): Boolean {
+        // Check if there's at least one empty free cell
+        return freeCells.any { it == null }
     }
 
     /**
