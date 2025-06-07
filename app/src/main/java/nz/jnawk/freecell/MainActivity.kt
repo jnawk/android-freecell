@@ -2,6 +2,7 @@ package nz.jnawk.freecell
 
 import android.os.Bundle
 import android.view.View
+import android.widget.FrameLayout
 import com.google.androidgamesdk.GameActivity
 
 class MainActivity : GameActivity() {
@@ -22,18 +23,31 @@ class MainActivity : GameActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Initialize your game engine
+        // 1. Create a FrameLayout to hold both views
+        val rootLayout = FrameLayout(this)
+        
+        // 2. Initialize your game engine
         gameEngine = FreecellGameEngine()
         // Note: gameEngine.startNewGame() is currently called in FreecellGameView's init block.
         // You could also call it here explicitly if you prefer, but ensure it's only called once.
 
-        // 2. Initialize your custom game view, passing the context and the game engine
+        // 3. Initialize your custom game view, passing the context and the game engine
         gameView = FreecellGameView(this, gameEngine = gameEngine)
+        
+        // 4. Create drag layer
+        val dragLayer = DragLayer(this)
+        
+        // 5. Add both views to the root layout
+        rootLayout.addView(gameView)
+        rootLayout.addView(dragLayer)
+        
+        // 6. Set up communication between views
+        gameView.setDragLayer(dragLayer)
+        
+        // 7. Set the root layout as content view
+        setContentView(rootLayout)
 
-        // 3. Set the game view as the content view for this activity
-        setContentView(gameView)
-
-        // 4. Hide system UI elements for a more immersive game experience
+        // 8. Hide system UI elements for a more immersive game experience
         hideSystemUi()
     }
 

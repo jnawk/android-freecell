@@ -1,11 +1,14 @@
 package nz.jnawk.freecell
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 
 class FreecellGameView @JvmOverloads constructor(
     context: Context,
@@ -15,6 +18,14 @@ class FreecellGameView @JvmOverloads constructor(
     // This could also be done via a ViewModel later for better architecture
     private val gameEngine: FreecellGameEngine
 ) : View(context, attrs, defStyleAttr) {
+    
+    // Reference to the drag layer
+    private var dragLayer: DragLayer? = null
+    
+    // Set the drag layer reference
+    fun setDragLayer(layer: DragLayer) {
+        dragLayer = layer
+    }
 
     // Paints for drawing different elements
     private val cardBackgroundPaint = Paint().apply {
@@ -42,6 +53,19 @@ class FreecellGameView @JvmOverloads constructor(
     private var cardHeight = 0f
     private var padding = 0f
     private var tableauCardOffset = 0f
+    
+    // Track the currently dragged card
+    private var draggedCard: Card? = null
+    private var draggedCardOriginalPile: Int = -1
+    private var draggedCardOriginalIndex: Int = -1
+
+    // Track touch position
+    private var dragX: Float = 0f
+    private var dragY: Float = 0f
+
+    // Track original position of the dragged card (for animation when returning)
+    private var draggedCardOriginalX: Float = 0f
+    private var draggedCardOriginalY: Float = 0f
 
     // Add initialization method to calculate dimensions
     private fun initDimensions() {
@@ -120,6 +144,8 @@ class FreecellGameView @JvmOverloads constructor(
         drawFreeCells(canvas)
         drawFoundationPiles(canvas)
         drawTableauPiles(canvas)
+        
+        // Don't draw the dragged card here - it's drawn in the drag layer
     }
 
     private fun drawFreeCells(canvas: Canvas) {
@@ -179,6 +205,11 @@ class FreecellGameView @JvmOverloads constructor(
                 // canvas.drawText("Empty", pileX + cardWidth / 2, currentY + cardHeight / 2, textPaint)
             } else {
                 for (cardIndex in pile.indices) {
+                    // Skip drawing the card that's being dragged
+                    if (pileIndex == draggedCardOriginalPile && cardIndex == draggedCardOriginalIndex && draggedCard != null) {
+                        continue
+                    }
+                    
                     val card = pile[cardIndex]
                     val cardTopY = currentY + (cardIndex * tableauCardOffset) // Overlap cards
                     drawCard(canvas, card, pileX, cardTopY)
@@ -187,6 +218,15 @@ class FreecellGameView @JvmOverloads constructor(
         }
     }
 
+    // For external access if needed
+    fun drawCardAt(canvas: Canvas, card: Card, x: Float, y: Float) {
+        drawCard(canvas, card, x, y)
+    }
+    
+    // Get card dimensions for the drag layer
+    fun getCardWidth(): Float = cardWidth
+    fun getCardHeight(): Float = cardHeight
+    
     private fun drawCard(canvas: Canvas, card: Card, x: Float, y: Float) {
         // Draw card background and border
         canvas.drawRect(x, y, x + cardWidth, y + cardHeight, cardBackgroundPaint)
@@ -212,7 +252,129 @@ class FreecellGameView @JvmOverloads constructor(
     fun updateView() {
         invalidate() // This tells Android to redraw the view by calling onDraw()
     }
-
-    // TODO: Override onTouchEvent(event: MotionEvent) for user interaction
-    // TODO: Implement onMeasure for proper sizing with layout managers
+    
+    // Helper class to store touched card information
+    private data class TouchedCard(
+        val card: Card,
+        val pileIndex: Int,
+        val cardIndex: Int
+    )
+    
+    // Find which card was touched in the tableau
+    private fun findTouchedTableauCard(touchX: Float, touchY: Float): TouchedCard? {
+        val tableauStartY = padding + cardHeight + padding * 2
+        
+        // Check each tableau pile from right to left (to handle overlapping cards correctly)
+        for (pileIndex in gameEngine.gameState.tableauPiles.indices.reversed()) {
+            val pile = gameEngine.gameState.tableauPiles[pileIndex]
+            if (pile.isEmpty()) continue
+            
+            val pileX = padding + pileIndex * (cardWidth + padding)
+            
+            // Only the bottom card in each pile can be dragged
+            val cardIndex = pile.size - 1
+            val card = pile[cardIndex]
+            val cardTopY = tableauStartY + (cardIndex * tableauCardOffset)
+            
+            // Check if touch is within this card's bounds
+            if (touchX >= pileX && touchX <= pileX + cardWidth &&
+                touchY >= cardTopY && touchY <= cardTopY + cardHeight) {
+                return TouchedCard(card, pileIndex, cardIndex)
+            }
+        }
+        
+        return null
+    }
+    
+    // Animate the card returning to its original position
+    private fun animateCardReturn() {
+        val startX = dragX
+        val startY = dragY
+        val endX = draggedCardOriginalX
+        val endY = draggedCardOriginalY
+        
+        val animator = ValueAnimator.ofFloat(0f, 1f)
+        animator.duration = 200 // Animation duration in milliseconds
+        animator.interpolator = DecelerateInterpolator()
+        
+        animator.addUpdateListener { animation ->
+            val fraction = animation.animatedValue as Float
+            dragX = startX + (endX - startX) * fraction
+            dragY = startY + (endY - startY) * fraction
+            
+            // When animation completes, clear the dragged card
+            if (fraction >= 1f) {
+                draggedCard = null
+                draggedCardOriginalPile = -1
+                draggedCardOriginalIndex = -1
+            }
+            
+            // Force redraw of the entire view
+            invalidate()
+        }
+        
+        animator.start()
+    }
+    
+    // Track if we're currently dragging
+    private var isDragging = false
+    
+    // Track the offset from touch point to card corner
+    private var touchOffsetX = 0f
+    private var touchOffsetY = 0f
+    
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                val touchedCard = findTouchedTableauCard(event.x, event.y)
+                if (touchedCard != null) {
+                    // Start dragging
+                    draggedCard = touchedCard.card
+                    draggedCardOriginalPile = touchedCard.pileIndex
+                    draggedCardOriginalIndex = touchedCard.cardIndex
+                    
+                    // Calculate original position for animation
+                    draggedCardOriginalX = padding + touchedCard.pileIndex * (cardWidth + padding)
+                    draggedCardOriginalY = (padding + cardHeight + padding * 2) + 
+                                         (touchedCard.cardIndex * tableauCardOffset)
+                    
+                    // Tell the drag layer to start dragging
+                    dragLayer?.let {
+                        // Start dragging in the drag layer
+                        it.startDrag(
+                            touchedCard.card,
+                            event.rawX,
+                            event.rawY,
+                            cardWidth,
+                            cardHeight
+                        )
+                    }
+                    
+                    invalidate()
+                    return true
+                }
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                if (draggedCard != null) {
+                    // Update drag position in drag layer
+                    dragLayer?.updateDragPosition(event.rawX, event.rawY)
+                    return true
+                }
+            }
+            
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (draggedCard != null) {
+                    // Stop dragging in drag layer
+                    dragLayer?.stopDrag()
+                    
+                    // Animate card back to original position
+                    animateCardReturn()
+                    return true
+                }
+            }
+        }
+        
+        return super.onTouchEvent(event)
+    }
 }
