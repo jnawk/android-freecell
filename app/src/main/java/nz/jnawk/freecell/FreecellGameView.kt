@@ -137,8 +137,8 @@ class FreecellGameView @JvmOverloads constructor(
         // Adjust text sizes based on card dimensions
         textPaint.textSize = cardWidth * 0.4f  // Larger main text
         redTextPaint.textSize = cardWidth * 0.4f
-        smallTextPaint.textSize = cardWidth * 0.15f  // Small corner text
-        smallRedTextPaint.textSize = cardWidth * 0.15f
+        smallTextPaint.textSize = cardWidth * 0.25f  // Larger corner text
+        smallRedTextPaint.textSize = cardWidth * 0.25f
     }
 
     init {
@@ -308,7 +308,17 @@ class FreecellGameView @JvmOverloads constructor(
                     
                     val card = pile[cardIndex]
                     val cardTopY = currentY + (cardIndex * tableauCardOffset) // Overlap cards
-                    drawCard(canvas, card, pileX, cardTopY)
+                    
+                    // Check if this is the last card in the pile (fully visible)
+                    val isLastCard = cardIndex == pile.size - 1
+                    
+                    if (isLastCard) {
+                        // Draw full card with center text for the last card
+                        drawFullCard(canvas, card, pileX, cardTopY)
+                    } else {
+                        // Draw only corner text for covered cards
+                        drawPartialCard(canvas, card, pileX, cardTopY)
+                    }
                 }
             }
         }
@@ -323,12 +333,14 @@ class FreecellGameView @JvmOverloads constructor(
     fun getCardWidth(): Float = cardWidth
     fun getCardHeight(): Float = cardHeight
     
-    private fun drawCard(canvas: Canvas, card: Card, x: Float, y: Float) {
+
+    // Draw a full card with center text
+    private fun drawFullCard(canvas: Canvas, card: Card, x: Float, y: Float) {
         // Draw card background and border
         canvas.drawRect(x, y, x + cardWidth, y + cardHeight, cardBackgroundPaint)
         canvas.drawRect(x, y, x + cardWidth, y + cardHeight, cardBorderPaint)
 
-        // Determine text paints based on suit color
+        // Determine text paint based on suit color
         val currentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
             redTextPaint
         } else {
@@ -341,15 +353,39 @@ class FreecellGameView @JvmOverloads constructor(
             smallTextPaint
         }
 
-        // Draw main rank and suit in center (larger)
+        // Draw main rank and suit in center
         val textX = x + cardWidth / 2
         val textY = y + cardHeight / 2 + currentTextPaint.textSize / 3
         canvas.drawText(card.toString(), textX, textY, currentTextPaint)
         
-        // Draw small rank and suit in top-left corner
+        // Draw corner text
         val cornerX = x + padding / 2
         val cornerY = y + smallCurrentTextPaint.textSize
         canvas.drawText(card.toString(), cornerX, cornerY, smallCurrentTextPaint)
+    }
+
+    // Draw a partial card with only corner text
+    private fun drawPartialCard(canvas: Canvas, card: Card, x: Float, y: Float) {
+        // Draw card background and border
+        canvas.drawRect(x, y, x + cardWidth, y + tableauCardOffset, cardBackgroundPaint)
+        canvas.drawRect(x, y, x + cardWidth, y + tableauCardOffset, cardBorderPaint)
+        
+        // Determine text paint based on suit color
+        val smallCurrentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
+            smallRedTextPaint
+        } else {
+            smallTextPaint
+        }
+        
+        // Draw only corner text
+        val cornerX = x + padding / 2
+        val cornerY = y + smallCurrentTextPaint.textSize
+        canvas.drawText(card.toString(), cornerX, cornerY, smallCurrentTextPaint)
+    }
+    
+    // For backward compatibility with existing code
+    private fun drawCard(canvas: Canvas, card: Card, x: Float, y: Float) {
+        drawFullCard(canvas, card, x, y)
     }
 
     /**
