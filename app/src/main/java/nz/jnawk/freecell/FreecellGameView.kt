@@ -53,7 +53,10 @@ class FreecellGameView @JvmOverloads constructor(
     private var cardHeight = 0f
     private var padding = 0f
     private var tableauCardOffset = 0f
-    
+
+    // Add a top margin to move the game down and avoid system notification area
+    private val topMargin = 72f
+
     // Highlight paint for valid destinations
     private val highlightPaint = Paint().apply {
         color = Color.YELLOW
@@ -188,30 +191,30 @@ class FreecellGameView @JvmOverloads constructor(
         // Highlight valid free cells
         for (index in validFreeCellIndices) {
             val x = padding + index * (cardWidth + padding)
-            val y = padding
-            val paint = if (hoveredDestinationType == DestinationType.FREE_CELL && hoveredDestinationIndex == index) 
+            val y = padding + topMargin
+            val paint = if (hoveredDestinationType == DestinationType.FREE_CELL && hoveredDestinationIndex == index)
                 targetHighlightPaint else highlightPaint
             canvas.drawRect(x - 2, y - 2, x + cardWidth + 2, y + cardHeight + 2, paint)
         }
-        
+
         // Highlight valid foundation piles
         val suitsOrder = Suit.values()
         for (index in validFoundationIndices) {
             val x = padding + (4 * (cardWidth + padding)) + index * (cardWidth + padding)
-            val y = padding
-            val paint = if (hoveredDestinationType == DestinationType.FOUNDATION && hoveredDestinationIndex == index) 
+            val y = padding + topMargin
+            val paint = if (hoveredDestinationType == DestinationType.FOUNDATION && hoveredDestinationIndex == index)
                 targetHighlightPaint else highlightPaint
             canvas.drawRect(x - 2, y - 2, x + cardWidth + 2, y + cardHeight + 2, paint)
         }
-        
+
         // Highlight valid tableau piles
         for (index in validTableauIndices) {
             val pile = gameEngine.gameState.tableauPiles[index]
             val x = padding + index * (cardWidth + padding)
-            val y = padding + cardHeight + padding * 2
-            val paint = if (hoveredDestinationType == DestinationType.TABLEAU && hoveredDestinationIndex == index) 
+            val y = padding + cardHeight + padding * 2 + topMargin
+            val paint = if (hoveredDestinationType == DestinationType.TABLEAU && hoveredDestinationIndex == index)
                 targetHighlightPaint else highlightPaint
-            
+
             if (pile.isEmpty()) {
                 // Empty tableau pile
                 canvas.drawRect(x - 2, y - 2, x + cardWidth + 2, y + cardHeight + 2, paint)
@@ -227,7 +230,7 @@ class FreecellGameView @JvmOverloads constructor(
         for (i in 0 until 4) {
             val card = gameEngine.gameState.freeCells[i]
             val x = padding + i * (cardWidth + padding)
-            val y = padding
+            val y = padding + topMargin
 
             // Draw placeholder for the cell
             canvas.drawRect(x, y, x + cardWidth, y + cardHeight, cardBackgroundPaint)
@@ -249,7 +252,7 @@ class FreecellGameView @JvmOverloads constructor(
             val pile = gameEngine.gameState.foundationPiles[suit]
             // Position foundations to the right of freecells, or on a new row
             val x = padding + (4 * (cardWidth + padding)) + i * (cardWidth + padding) // Example positioning
-            val y = padding
+            val y = padding + topMargin
 
             // Draw placeholder for the cell
             canvas.drawRect(x, y, x + cardWidth, y + cardHeight, cardBackgroundPaint)
@@ -267,7 +270,7 @@ class FreecellGameView @JvmOverloads constructor(
     }
 
     private fun drawTableauPiles(canvas: Canvas) {
-        val tableauStartY = padding + cardHeight + padding * 2 // Start Y below freecells/foundations
+        val tableauStartY = padding + cardHeight + padding * 2 + topMargin // Start Y below freecells/foundations
 
         for (pileIndex in gameEngine.gameState.tableauPiles.indices) {
             val pile = gameEngine.gameState.tableauPiles[pileIndex]
@@ -337,8 +340,8 @@ class FreecellGameView @JvmOverloads constructor(
     
     // Find which card was touched in the tableau
     private fun findTouchedTableauCard(touchX: Float, touchY: Float): TouchedCard? {
-        val tableauStartY = padding + cardHeight + padding * 2
-        
+        val tableauStartY = padding + cardHeight + padding * 2 + topMargin
+
         // Check each tableau pile from right to left (to handle overlapping cards correctly)
         for (pileIndex in gameEngine.gameState.tableauPiles.indices.reversed()) {
             val pile = gameEngine.gameState.tableauPiles[pileIndex]
@@ -418,8 +421,8 @@ class FreecellGameView @JvmOverloads constructor(
         // Check free cells
         for (index in validFreeCellIndices) {
             val cellX = padding + index * (cardWidth + padding)
-            val cellY = padding
-            
+            val cellY = padding + topMargin
+
             val overlap = calculateRectOverlap(
                 cardLeft, cardTop, cardRight, cardBottom,
                 cellX, cellY, cellX + cardWidth, cellY + cardHeight
@@ -436,8 +439,8 @@ class FreecellGameView @JvmOverloads constructor(
         val suitsOrder = Suit.values()
         for (index in validFoundationIndices) {
             val x = padding + (4 * (cardWidth + padding)) + index * (cardWidth + padding)
-            val y = padding
-            
+            val y = padding + topMargin
+
             val overlap = calculateRectOverlap(
                 cardLeft, cardTop, cardRight, cardBottom,
                 x, y, x + cardWidth, y + cardHeight
@@ -454,8 +457,8 @@ class FreecellGameView @JvmOverloads constructor(
         for (index in validTableauIndices) {
             val pile = gameEngine.gameState.tableauPiles[index]
             val x = padding + index * (cardWidth + padding)
-            val y = padding + cardHeight + padding * 2
-            
+            val y = padding + cardHeight + padding * 2 + topMargin
+
             val pileY = if (pile.isEmpty()) {
                 y
             } else {
@@ -554,7 +557,7 @@ class FreecellGameView @JvmOverloads constructor(
                     
                     // Calculate original position for animation
                     draggedCardOriginalX = padding + touchedCard.pileIndex * (cardWidth + padding)
-                    draggedCardOriginalY = (padding + cardHeight + padding * 2) + 
+                    draggedCardOriginalY = (padding + cardHeight + padding * 2) +
                                          (touchedCard.cardIndex * tableauCardOffset)
                     
                     // Find valid destinations for this card
