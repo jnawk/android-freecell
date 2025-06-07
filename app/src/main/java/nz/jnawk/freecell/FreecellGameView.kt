@@ -158,7 +158,8 @@ class FreecellGameView @JvmOverloads constructor(
             if (topCard != null) {
                 drawCard(canvas, topCard, x, y)
             } else {
-                canvas.drawText(suit.name.first().toString(), x + cardWidth / 2, y + cardHeight / 2 + textPaint.textSize / 3, textPaint)
+                val suitPaint = if (suit == Suit.HEARTS || suit == Suit.DIAMONDS) redTextPaint else textPaint
+                canvas.drawText(suit.getSymbol(), x + cardWidth / 2, y + cardHeight / 2 + suitPaint.textSize / 3, suitPaint)
             }
 
         }

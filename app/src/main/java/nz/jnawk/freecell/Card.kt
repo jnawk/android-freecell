@@ -1,7 +1,16 @@
 package nz.jnawk.freecell
 
 enum class Suit {
-    HEARTS, DIAMONDS, CLUBS, SPADES
+    HEARTS, DIAMONDS, CLUBS, SPADES;
+    
+    fun getSymbol(): String {
+        return when (this) {
+            HEARTS -> "♥"
+            DIAMONDS -> "♦"
+            CLUBS -> "♣"
+            SPADES -> "♠"
+        }
+    }
 }
 
 enum class Rank(val value: Int) {
@@ -29,8 +38,8 @@ data class Card(val suit: Suit, val rank: Rank) {
         return isThisRed != isOtherRed
     }
 
-    // Optional: A simple string representation for debugging
+    // String representation with Unicode suit symbols
     override fun toString(): String {
-        return "${rank.getDisplayName()}${suit.name.first()}" // e.g., "AH", "7S", "KD"
+        return "${rank.getDisplayName()}${suit.getSymbol()}" // e.g., "A♥", "7♠", "K♦"
     }
 }
