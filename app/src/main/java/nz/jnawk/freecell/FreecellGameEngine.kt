@@ -43,9 +43,9 @@ class FreecellGameEngine {
      * Check if a card can be moved to a destination tableau pile.
      */
     fun canMoveToTableau(cardToMove: Card, destinationPileTopCard: Card?): Boolean {
-        // If destination pile is empty, Kings can be moved there
+        // If destination pile is empty, then cards can be moved there
         if (destinationPileTopCard == null) {
-            return cardToMove.rank == Rank.KING
+            return true
         }
 
         // Card must be opposite color and one rank lower than the destination card
