@@ -33,6 +33,10 @@
   - Add a "New Game" button to the UI
   - Implement functionality to reset the game state and deal a new hand
   - Confirm with the player before abandoning the current game
+- [ ] Preserve game state during screen rotation (Issue #11)
+  - Save game state before rotation
+  - Restore game state after rotation
+  - Prevent new game from being dealt on rotation
 
 ## Configuration
 - [ ] Configure data backup rules in `data_extraction_rules.xml` (Issue #5)
