@@ -77,12 +77,70 @@ class FreecellGameEngine {
     }
 
     /**
-     * Placeholder for executing a move. This will be more complex,
-     * involving removing the card from its source and adding to its destination.
+     * Move a card from a tableau pile to another tableau pile.
      */
-    fun makeMove(/* parameters defining the move */) {
-        // TODO: Implement removing card from source and adding to destination
-        // This will modify gameState.tableauPiles, gameState.freeCells, or gameState.foundationPiles
+    fun moveFromTableauToTableau(fromPileIndex: Int, toPileIndex: Int): Boolean {
+        val fromPile = gameState.tableauPiles[fromPileIndex]
+        if (fromPile.isEmpty()) return false
+        
+        val card = fromPile.last()
+        val toPile = gameState.tableauPiles[toPileIndex]
+        val topCard = toPile.lastOrNull()
+        
+        if (canMoveToTableau(card, topCard)) {
+            // Remove from source pile
+            fromPile.removeAt(fromPile.size - 1)
+            // Add to destination pile
+            toPile.add(card)
+            return true
+        }
+        
+        return false
+    }
+
+    /**
+     * Move a card from a tableau pile to a free cell.
+     */
+    fun moveFromTableauToFreeCell(fromPileIndex: Int, toCellIndex: Int): Boolean {
+        val fromPile = gameState.tableauPiles[fromPileIndex]
+        if (fromPile.isEmpty()) return false
+        
+        val card = fromPile.last()
+        
+        if (gameState.freeCells[toCellIndex] == null) {
+            // Remove from source pile
+            fromPile.removeAt(fromPile.size - 1)
+            // Add to free cell
+            gameState.freeCells[toCellIndex] = card
+            return true
+        }
+        
+        return false
+    }
+
+    /**
+     * Move a card from a tableau pile to a foundation pile.
+     */
+    fun moveFromTableauToFoundation(fromPileIndex: Int, toFoundationSuit: Suit): Boolean {
+        val fromPile = gameState.tableauPiles[fromPileIndex]
+        if (fromPile.isEmpty()) return false
+        
+        val card = fromPile.last()
+        val foundationPile = gameState.foundationPiles[toFoundationSuit]
+        
+        if (canMoveToFoundation(card, foundationPile)) {
+            // Remove from source pile
+            fromPile.removeAt(fromPile.size - 1)
+            // Add to foundation pile
+            if (foundationPile == null) {
+                gameState.foundationPiles[toFoundationSuit] = mutableListOf(card)
+            } else {
+                foundationPile.add(card)
+            }
+            return true
+        }
+        
+        return false
     }
 
     /**

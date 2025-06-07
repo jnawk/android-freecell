@@ -607,13 +607,51 @@ class FreecellGameView @JvmOverloads constructor(
             
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (draggedCard != null) {
-                    // Get original position in screen coordinates
+                    // Check if we're hovering over a valid destination
+                    if (hoveredDestinationType != null && hoveredDestinationIndex != -1) {
+                        // Try to move the card to the destination
+                        val moved = when (hoveredDestinationType) {
+                            DestinationType.FREE_CELL -> 
+                                gameEngine.moveFromTableauToFreeCell(draggedCardOriginalPile, hoveredDestinationIndex)
+                            
+                            DestinationType.FOUNDATION -> {
+                                val suit = Suit.values()[hoveredDestinationIndex]
+                                gameEngine.moveFromTableauToFoundation(draggedCardOriginalPile, suit)
+                            }
+                            
+                            DestinationType.TABLEAU -> {
+                                gameEngine.moveFromTableauToTableau(
+                                    draggedCardOriginalPile,
+                                    hoveredDestinationIndex
+                                )
+                            }
+
+                            null -> false
+                        }
+                        
+                        if (moved) {
+                            // Card was moved successfully, clean up
+                            dragLayer?.stopDrag()
+                            draggedCard = null
+                            draggedCardOriginalPile = -1
+                            draggedCardOriginalIndex = -1
+                            hoveredDestinationType = null
+                            hoveredDestinationIndex = -1
+                            validFreeCellIndices.clear()
+                            validFoundationIndices.clear()
+                            validTableauIndices.clear()
+                            invalidate()
+                            return true
+                        }
+                    }
+                    
+                    // If we get here, either there was no valid destination or the move failed
+                    // Animate card back to its original position
                     val loc = IntArray(2)
                     getLocationOnScreen(loc)
                     val screenOriginalX = draggedCardOriginalX + loc[0]
                     val screenOriginalY = draggedCardOriginalY + loc[1]
                     
-                    // Animate card back in the drag layer
                     dragLayer?.animateCardReturn(screenOriginalX, screenOriginalY) {
                         // When animation completes
                         draggedCard = null
