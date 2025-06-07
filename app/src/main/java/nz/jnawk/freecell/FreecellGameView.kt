@@ -28,27 +28,87 @@ class FreecellGameView @JvmOverloads constructor(
     }
     private val textPaint = Paint().apply {
         color = Color.BLACK
-        textSize = 30f // Adjust as needed
+        textSize = 30f // Will be adjusted based on card size
         textAlign = Paint.Align.CENTER // Center text horizontally
     }
     private val redTextPaint = Paint().apply {
         color = Color.RED
-        textSize = 30f
+        textSize = 30f // Will be adjusted based on card size
         textAlign = Paint.Align.CENTER
     }
 
-    // Basic dimensions - these will need refinement for different screen sizes
-    private val cardWidth = 120f
-    private val cardHeight = 180f
-    private val padding = 20f
-    private val tableauCardOffset = 40f // How much cards in a tableau pile overlap vertically
+    // Dynamic dimensions that will be calculated based on screen size
+    private var cardWidth = 0f
+    private var cardHeight = 0f
+    private var padding = 0f
+    private var tableauCardOffset = 0f
+
+    // Add initialization method to calculate dimensions
+    private fun initDimensions() {
+        // Get screen dimensions
+        val displayMetrics = context.resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+
+        // Calculate card dimensions based on screen width
+        padding = screenWidth * 0.015f // 1.5% of screen width for padding
+
+        // Calculate card width to fit 8 cards with padding between them
+        cardWidth = (screenWidth - (9 * padding)) / 8
+
+        // Standard card ratio is 2.5:3.5 (width:height)
+        cardHeight = cardWidth * 1.4f
+
+        // Adjust tableau card offset based on card height
+        tableauCardOffset = cardHeight * 0.22f
+
+        // Adjust text sizes based on card dimensions
+        textPaint.textSize = cardWidth * 0.25f
+        redTextPaint.textSize = cardWidth * 0.25f
+    }
 
     init {
+        // Initialize dimensions
+        initDimensions()
+
         // Initialize the game when the view is created if it hasn't been started
         // This is a simple approach; later, game start might be triggered by user action
         if (gameEngine.gameState.tableauPiles.all { it.isEmpty() }) {
             gameEngine.startNewGame()
         }
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        initDimensions()
+    }
+
+    // Add proper onMeasure implementation
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+
+        // Initialize dimensions if not already done
+        if (cardWidth == 0f) {
+            initDimensions()
+        }
+
+        // Calculate required height based on tableau piles
+        val maxTableauCards = gameEngine.gameState.tableauPiles.maxOfOrNull { it.size } ?: 0
+
+        // Calculate height needed for the tallest tableau
+        val tableauHeight = if (maxTableauCards > 0) {
+            cardHeight + (maxTableauCards - 1) * tableauCardOffset
+        } else {
+            cardHeight
+        }
+
+        // Total height = freecell row + padding + tableau height + padding
+        val totalHeight = (2 * cardHeight) + (3 * padding) + tableauHeight
+
+        // Set the measured dimensions
+        setMeasuredDimension(
+            MeasureSpec.getSize(widthMeasureSpec),
+            totalHeight.toInt().coerceAtMost(MeasureSpec.getSize(heightMeasureSpec))
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -101,12 +161,6 @@ class FreecellGameView @JvmOverloads constructor(
                 canvas.drawText(suit.name.first().toString(), x + cardWidth / 2, y + cardHeight / 2 + textPaint.textSize / 3, textPaint)
             }
 
-//            pile?.lastOrNull()?.let { topCard ->
-//                drawCard(canvas, topCard, x, y)
-//            } else {
-//                // Optionally draw suit symbol or "Ace" placeholder
-//                canvas.drawText(suit.name.first().toString(), x + cardWidth / 2, y + cardHeight / 2 + textPaint.textSize/3, textPaint)
-//            }
         }
     }
 
