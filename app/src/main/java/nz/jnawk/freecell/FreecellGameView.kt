@@ -365,11 +365,20 @@ class FreecellGameView @JvmOverloads constructor(
             
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (draggedCard != null) {
-                    // Stop dragging in drag layer
-                    dragLayer?.stopDrag()
+                    // Get original position in screen coordinates
+                    val loc = IntArray(2)
+                    getLocationOnScreen(loc)
+                    val screenOriginalX = draggedCardOriginalX + loc[0]
+                    val screenOriginalY = draggedCardOriginalY + loc[1]
                     
-                    // Animate card back to original position
-                    animateCardReturn()
+                    // Animate card back in the drag layer
+                    dragLayer?.animateCardReturn(screenOriginalX, screenOriginalY) {
+                        // When animation completes
+                        draggedCard = null
+                        draggedCardOriginalPile = -1
+                        draggedCardOriginalIndex = -1
+                        invalidate()
+                    }
                     return true
                 }
             }

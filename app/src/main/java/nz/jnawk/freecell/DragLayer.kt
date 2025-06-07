@@ -1,10 +1,12 @@
 package nz.jnawk.freecell
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 
 class DragLayer @JvmOverloads constructor(
@@ -78,6 +80,34 @@ class DragLayer @JvmOverloads constructor(
     fun stopDrag() {
         draggedCard = null
         invalidate()
+    }
+    
+    // Animate card returning to its original position
+    fun animateCardReturn(endX: Float, endY: Float, onComplete: () -> Unit) {
+        val card = draggedCard ?: return
+        
+        val startX = dragX
+        val startY = dragY
+        
+        val animator = ValueAnimator.ofFloat(0f, 1f)
+        animator.duration = 200 // Animation duration in milliseconds
+        animator.interpolator = DecelerateInterpolator()
+        
+        animator.addUpdateListener { animation ->
+            val fraction = animation.animatedValue as Float
+            dragX = startX + (endX - startX) * fraction
+            dragY = startY + (endY - startY) * fraction
+            
+            // When animation completes, clear the dragged card
+            if (fraction >= 1f) {
+                draggedCard = null
+                onComplete()
+            }
+            
+            invalidate()
+        }
+        
+        animator.start()
     }
     
     override fun onDraw(canvas: Canvas) {
