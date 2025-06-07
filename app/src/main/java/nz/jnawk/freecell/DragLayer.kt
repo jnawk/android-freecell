@@ -46,6 +46,15 @@ class DragLayer @JvmOverloads constructor(
         textSize = 30f
         textAlign = Paint.Align.CENTER
     }
+    // Small text paints for card corners
+    private val smallTextPaint = Paint().apply {
+        color = Color.BLACK
+        textAlign = Paint.Align.LEFT
+    }
+    private val smallRedTextPaint = Paint().apply {
+        color = Color.RED
+        textAlign = Paint.Align.LEFT
+    }
 
     // Make the drag layer transparent to pass touch events through
     init {
@@ -63,8 +72,10 @@ class DragLayer @JvmOverloads constructor(
         cardHeight = height
 
         // Update text sizes based on card dimensions
-        textPaint.textSize = cardWidth * 0.25f
-        redTextPaint.textSize = cardWidth * 0.25f
+        textPaint.textSize = cardWidth * 0.4f  // Main text size
+        redTextPaint.textSize = cardWidth * 0.4f
+        smallTextPaint.textSize = cardWidth * 0.25f  // Corner text size
+        smallRedTextPaint.textSize = cardWidth * 0.25f
 
         invalidate()
     }
@@ -131,10 +142,21 @@ class DragLayer @JvmOverloads constructor(
         } else {
             textPaint
         }
+        
+        val smallCurrentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
+            smallRedTextPaint
+        } else {
+            smallTextPaint
+        }
 
-        // Draw rank and suit
+        // Draw main rank and suit in center
         val textX = x + cardWidth / 2
         val textY = y + cardHeight / 2 + currentTextPaint.textSize / 3
         canvas.drawText(card.toString(), textX, textY, currentTextPaint)
+        
+        // Draw corner text (top-left)
+        val cornerX = x + cardWidth * 0.015f // Use same relative padding as in FreecellGameView
+        val cornerY = y + smallCurrentTextPaint.textSize
+        canvas.drawText(card.toString(), cornerX, cornerY, smallCurrentTextPaint)
     }
 }

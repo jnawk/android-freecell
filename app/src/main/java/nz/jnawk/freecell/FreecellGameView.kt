@@ -131,8 +131,9 @@ class FreecellGameView @JvmOverloads constructor(
         // Standard card ratio is 2.5:3.5 (width:height)
         cardHeight = cardWidth * 1.4f
 
-        // Increase the offset to show more of each card in the tableau
-        tableauCardOffset = cardHeight * 0.4f
+        // Adjust the offset to ensure the central text of cards is covered
+        // We want to show just enough of the card to see the corner indicators
+        tableauCardOffset = cardHeight * 0.25f
 
         // Adjust text sizes based on card dimensions
         textPaint.textSize = cardWidth * 0.4f  // Larger main text
@@ -176,7 +177,7 @@ class FreecellGameView @JvmOverloads constructor(
             cardHeight
         }
 
-        // TODO: Issue #4 - Fix clipping of cards at the bottom of tall tableau piles
+        // TODO: Issue #1 - Fix clipping of cards at the bottom of tall tableau piles
         // Either make the view dynamically resize as tableau piles grow, or
         // ensure it's initially sized to accommodate the maximum possible pile height
         // (13 cards in a suit + 6 initial cards in the tallest tableau)
@@ -314,20 +315,12 @@ class FreecellGameView @JvmOverloads constructor(
                     val card = pile[cardIndex]
                     val cardTopY = currentY + (cardIndex * tableauCardOffset) // Overlap cards
 
-                    // TODO: Issue #5 - Fix issue with cards not being revealed properly when dragging
-                    // When a card is dragged away, the card underneath is not revealed until the card is released
-                    // Revert to drawing full cards all the time, but adjust offsets so center text is covered
+                    // Issue #2 implementation: Cards are now properly revealed when dragging
+                    // Adjusted tableauCardOffset and drawing full cards for all cards in the tableau
 
-                    // Check if this is the last card in the pile (fully visible)
-                    val isLastCard = cardIndex == pile.size - 1
-
-                    if (isLastCard) {
-                        // Draw full card with center text for the last card
-                        drawFullCard(canvas, card, pileX, cardTopY)
-                    } else {
-                        // Draw only corner text for covered cards
-                        drawPartialCard(canvas, card, pileX, cardTopY)
-                    }
+                    // Draw full cards for all cards in the tableau
+                    // This ensures that when a card is dragged away, the card underneath is fully visible
+                    drawFullCard(canvas, card, pileX, cardTopY)
                 }
             }
         }
@@ -372,11 +365,14 @@ class FreecellGameView @JvmOverloads constructor(
         canvas.drawText(card.toString(), cornerX, cornerY, smallCurrentTextPaint)
     }
 
-    // Draw a partial card with only corner text
+    // This method is no longer used as we now draw full cards for all cards in the tableau
+    // Keeping it here for reference in case we need it in the future
+    /*
     private fun drawPartialCard(canvas: Canvas, card: Card, x: Float, y: Float) {
         // Draw card background and border
-        canvas.drawRect(x, y, x + cardWidth, y + tableauCardOffset, cardBackgroundPaint)
-        canvas.drawRect(x, y, x + cardWidth, y + tableauCardOffset, cardBorderPaint)
+        val visibleHeight = tableauCardOffset * 1.2f
+        canvas.drawRect(x, y, x + cardWidth, y + visibleHeight, cardBackgroundPaint)
+        canvas.drawRect(x, y, x + cardWidth, y + visibleHeight, cardBorderPaint)
 
         // Determine text paint based on suit color
         val smallCurrentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
@@ -390,6 +386,7 @@ class FreecellGameView @JvmOverloads constructor(
         val cornerY = y + smallCurrentTextPaint.textSize
         canvas.drawText(card.toString(), cornerX, cornerY, smallCurrentTextPaint)
     }
+    */
 
     // For backward compatibility with existing code
     private fun drawCard(canvas: Canvas, card: Card, x: Float, y: Float) {
