@@ -479,8 +479,8 @@ class FreecellGameView @JvmOverloads constructor(
 
         // Check tableau piles
         for (i in gameEngine.gameState.tableauPiles.indices) {
-            // Skip the pile the card is coming from
-            if (i == draggedCardOriginalPile) continue
+            // Skip the pile the card is coming from if it's a tableau pile
+            if (draggedCardSource == CardSource.TABLEAU && i == draggedCardOriginalPile) continue
 
             val pile = gameEngine.gameState.tableauPiles[i]
             val topCard = pile.lastOrNull()
