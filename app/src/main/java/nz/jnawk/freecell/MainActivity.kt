@@ -1,8 +1,12 @@
 package nz.jnawk.freecell
 
+import android.app.AlertDialog
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
+import android.widget.Button
 import android.widget.FrameLayout
+import androidx.core.content.ContextCompat
 import com.google.androidgamesdk.GameActivity
 
 class MainActivity : GameActivity() {
@@ -23,7 +27,7 @@ class MainActivity : GameActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Create a FrameLayout to hold both views
+        // 1. Create a FrameLayout to hold all views
         val rootLayout = FrameLayout(this)
 
         // 2. Initialize your game engine
@@ -37,18 +41,54 @@ class MainActivity : GameActivity() {
         // 4. Create drag layer
         val dragLayer = DragLayer(this)
 
-        // 5. Add both views to the root layout
+        // 5. Create New Game button
+        val newGameButton = Button(this).apply {
+            text = "New Game"
+            setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_blue_dark))
+            setTextColor(ContextCompat.getColor(context, android.R.color.white))
+            alpha = 0.8f
+            
+            // Set click listener
+            setOnClickListener {
+                showNewGameConfirmationDialog()
+            }
+        }
+        
+        // Create layout parameters for the button (positioned at bottom center)
+        val buttonParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            bottomMargin = 48 // Add margin to keep it above navigation buttons
+        }
+
+        // 6. Add all views to the root layout
         rootLayout.addView(gameView)
         rootLayout.addView(dragLayer)
+        rootLayout.addView(newGameButton, buttonParams)
 
-        // 6. Set up communication between views
+        // 7. Set up communication between views
         gameView.setDragLayer(dragLayer)
 
-        // 7. Set the root layout as content view
+        // 8. Set the root layout as content view
         setContentView(rootLayout)
 
-        // 8. Hide system UI elements for a more immersive game experience
+        // 9. Hide system UI elements for a more immersive game experience
         hideSystemUi()
+    }
+    
+    private fun showNewGameConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("New Game")
+            .setMessage("Are you sure you want to start a new game? Your current progress will be lost.")
+            .setPositiveButton("Yes") { _, _ ->
+                // Start a new game
+                gameEngine.startNewGame()
+                gameView.updateView()
+            }
+            .setNegativeButton("No", null)
+            .show()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

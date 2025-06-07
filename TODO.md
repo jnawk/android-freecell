@@ -29,7 +29,7 @@
   - Implemented solution: Initially size the view to accommodate the maximum possible pile height (19 cards)
 - [x] Fix issue with cards not being revealed properly when dragging (Issue #2)
   - When a card is dragged away, the card underneath is not revealed until the card is released
-- [ ] Add "New Game" button (Issue #9)
+- [x] Add "New Game" button (Issue #9)
   - Add a "New Game" button to the UI
   - Implement functionality to reset the game state and deal a new hand
   - Confirm with the player before abandoning the current game
