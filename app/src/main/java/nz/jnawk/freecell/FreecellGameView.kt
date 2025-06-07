@@ -167,20 +167,14 @@ class FreecellGameView @JvmOverloads constructor(
             initDimensions()
         }
 
-        // Calculate required height based on tableau piles
-        val maxTableauCards = gameEngine.gameState.tableauPiles.maxOfOrNull { it.size } ?: 0
+        // Instead of using the current pile heights, calculate the maximum possible height
+        // In Freecell, a tableau pile could have up to 19 cards in the worst case:
+        // - Initial deal: up to 7 cards in the first 4 piles
+        // - During gameplay: potentially all 13 cards of a suit could end up in one pile
+        val maxPossibleTableauCards = 19
 
-        // Calculate height needed for the tallest tableau
-        val tableauHeight = if (maxTableauCards > 0) {
-            cardHeight + (maxTableauCards - 1) * tableauCardOffset
-        } else {
-            cardHeight
-        }
-
-        // TODO: Issue #1 - Fix clipping of cards at the bottom of tall tableau piles
-        // Either make the view dynamically resize as tableau piles grow, or
-        // ensure it's initially sized to accommodate the maximum possible pile height
-        // (13 cards in a suit + 6 initial cards in the tallest tableau)
+        // Calculate height needed for the maximum possible tableau
+        val tableauHeight = cardHeight + (maxPossibleTableauCards - 1) * tableauCardOffset
 
         // Total height = freecell row + padding + tableau height + padding
         val totalHeight = (2 * cardHeight) + (3 * padding) + tableauHeight
