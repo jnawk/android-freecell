@@ -25,7 +25,7 @@ class MainActivity : GameActivity() {
 
         // 1. Create a FrameLayout to hold both views
         val rootLayout = FrameLayout(this)
-        
+
         // 2. Initialize your game engine
         gameEngine = FreecellGameEngine()
         // Note: gameEngine.startNewGame() is currently called in FreecellGameView's init block.
@@ -33,17 +33,17 @@ class MainActivity : GameActivity() {
 
         // 3. Initialize your custom game view, passing the context and the game engine
         gameView = FreecellGameView(this, gameEngine = gameEngine)
-        
+
         // 4. Create drag layer
         val dragLayer = DragLayer(this)
-        
+
         // 5. Add both views to the root layout
         rootLayout.addView(gameView)
         rootLayout.addView(dragLayer)
-        
+
         // 6. Set up communication between views
         gameView.setDragLayer(dragLayer)
-        
+
         // 7. Set the root layout as content view
         setContentView(rootLayout)
 

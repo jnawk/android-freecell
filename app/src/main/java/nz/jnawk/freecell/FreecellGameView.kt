@@ -18,10 +18,10 @@ class FreecellGameView @JvmOverloads constructor(
     // This could also be done via a ViewModel later for better architecture
     private val gameEngine: FreecellGameEngine
 ) : View(context, attrs, defStyleAttr) {
-    
+
     // Reference to the drag layer
     private var dragLayer: DragLayer? = null
-    
+
     // Set the drag layer reference
     fun setDragLayer(layer: DragLayer) {
         dragLayer = layer
@@ -47,7 +47,7 @@ class FreecellGameView @JvmOverloads constructor(
         textSize = 30f // Will be adjusted based on card size
         textAlign = Paint.Align.CENTER
     }
-    
+
     // Small text paints for card corners
     private val smallTextPaint = Paint().apply {
         color = Color.BLACK
@@ -74,7 +74,7 @@ class FreecellGameView @JvmOverloads constructor(
         strokeWidth = 4f
         alpha = 180
     }
-    
+
     // Highlight paint for the current destination
     private val targetHighlightPaint = Paint().apply {
         color = Color.GREEN
@@ -82,26 +82,26 @@ class FreecellGameView @JvmOverloads constructor(
         strokeWidth = 6f
         alpha = 220
     }
-    
+
     // Track valid destinations for the currently dragged card
     private val validFreeCellIndices = mutableListOf<Int>()
     private val validFoundationIndices = mutableListOf<Int>()
     private val validTableauIndices = mutableListOf<Int>()
-    
+
     // Track the currently hovered destination
     private var hoveredDestinationType: DestinationType? = null
     private var hoveredDestinationIndex: Int = -1
-    
+
     // Define destination types
     private enum class DestinationType {
         FREE_CELL, FOUNDATION, TABLEAU
     }
-    
+
     // Define card sources
     private enum class CardSource {
         TABLEAU, FREE_CELL
     }
-    
+
     // Track the currently dragged card
     private var draggedCard: Card? = null
     private var draggedCardSource: CardSource = CardSource.TABLEAU
@@ -176,6 +176,11 @@ class FreecellGameView @JvmOverloads constructor(
             cardHeight
         }
 
+        // TODO: Issue #4 - Fix clipping of cards at the bottom of tall tableau piles
+        // Either make the view dynamically resize as tableau piles grow, or
+        // ensure it's initially sized to accommodate the maximum possible pile height
+        // (13 cards in a suit + 6 initial cards in the tallest tableau)
+
         // Total height = freecell row + padding + tableau height + padding
         val totalHeight = (2 * cardHeight) + (3 * padding) + tableauHeight
 
@@ -195,17 +200,17 @@ class FreecellGameView @JvmOverloads constructor(
         drawFreeCells(canvas)
         drawFoundationPiles(canvas)
         drawTableauPiles(canvas)
-        
+
         // Draw highlights for valid destinations
         drawValidDestinationHighlights(canvas)
-        
+
         // Don't draw the dragged card here - it's drawn in the drag layer
     }
-    
+
     private fun drawValidDestinationHighlights(canvas: Canvas) {
         // Only draw highlights if a card is being dragged
         if (draggedCard == null) return
-        
+
         // Highlight valid free cells
         for (index in validFreeCellIndices) {
             val x = padding + index * (cardWidth + padding)
@@ -305,13 +310,17 @@ class FreecellGameView @JvmOverloads constructor(
                     if (pileIndex == draggedCardOriginalPile && cardIndex == draggedCardOriginalIndex && draggedCard != null) {
                         continue
                     }
-                    
+
                     val card = pile[cardIndex]
                     val cardTopY = currentY + (cardIndex * tableauCardOffset) // Overlap cards
-                    
+
+                    // TODO: Issue #5 - Fix issue with cards not being revealed properly when dragging
+                    // When a card is dragged away, the card underneath is not revealed until the card is released
+                    // Revert to drawing full cards all the time, but adjust offsets so center text is covered
+
                     // Check if this is the last card in the pile (fully visible)
                     val isLastCard = cardIndex == pile.size - 1
-                    
+
                     if (isLastCard) {
                         // Draw full card with center text for the last card
                         drawFullCard(canvas, card, pileX, cardTopY)
@@ -328,11 +337,10 @@ class FreecellGameView @JvmOverloads constructor(
     fun drawCardAt(canvas: Canvas, card: Card, x: Float, y: Float) {
         drawCard(canvas, card, x, y)
     }
-    
+
     // Get card dimensions for the drag layer
     fun getCardWidth(): Float = cardWidth
     fun getCardHeight(): Float = cardHeight
-    
 
     // Draw a full card with center text
     private fun drawFullCard(canvas: Canvas, card: Card, x: Float, y: Float) {
@@ -346,7 +354,7 @@ class FreecellGameView @JvmOverloads constructor(
         } else {
             textPaint
         }
-        
+
         val smallCurrentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
             smallRedTextPaint
         } else {
@@ -357,7 +365,7 @@ class FreecellGameView @JvmOverloads constructor(
         val textX = x + cardWidth / 2
         val textY = y + cardHeight / 2 + currentTextPaint.textSize / 3
         canvas.drawText(card.toString(), textX, textY, currentTextPaint)
-        
+
         // Draw corner text
         val cornerX = x + padding / 2
         val cornerY = y + smallCurrentTextPaint.textSize
@@ -369,20 +377,20 @@ class FreecellGameView @JvmOverloads constructor(
         // Draw card background and border
         canvas.drawRect(x, y, x + cardWidth, y + tableauCardOffset, cardBackgroundPaint)
         canvas.drawRect(x, y, x + cardWidth, y + tableauCardOffset, cardBorderPaint)
-        
+
         // Determine text paint based on suit color
         val smallCurrentTextPaint = if (card.suit == Suit.HEARTS || card.suit == Suit.DIAMONDS) {
             smallRedTextPaint
         } else {
             smallTextPaint
         }
-        
+
         // Draw only corner text
         val cornerX = x + padding / 2
         val cornerY = y + smallCurrentTextPaint.textSize
         canvas.drawText(card.toString(), cornerX, cornerY, smallCurrentTextPaint)
     }
-    
+
     // For backward compatibility with existing code
     private fun drawCard(canvas: Canvas, card: Card, x: Float, y: Float) {
         drawFullCard(canvas, card, x, y)
@@ -394,14 +402,14 @@ class FreecellGameView @JvmOverloads constructor(
     fun updateView() {
         invalidate() // This tells Android to redraw the view by calling onDraw()
     }
-    
+
     // Helper class to store touched card information
     private data class TouchedCard(
         val card: Card,
         val pileIndex: Int,
         val cardIndex: Int
     )
-    
+
     // Find which card was touched in the tableau
     private fun findTouchedTableauCard(touchX: Float, touchY: Float): TouchedCard? {
         val tableauStartY = padding + cardHeight + padding * 2 + topMargin
@@ -410,32 +418,32 @@ class FreecellGameView @JvmOverloads constructor(
         for (pileIndex in gameEngine.gameState.tableauPiles.indices.reversed()) {
             val pile = gameEngine.gameState.tableauPiles[pileIndex]
             if (pile.isEmpty()) continue
-            
+
             val pileX = padding + pileIndex * (cardWidth + padding)
-            
+
             // Only the bottom card in each pile can be dragged
             val cardIndex = pile.size - 1
             val card = pile[cardIndex]
             val cardTopY = tableauStartY + (cardIndex * tableauCardOffset)
-            
+
             // Check if touch is within this card's bounds
             if (touchX >= pileX && touchX <= pileX + cardWidth &&
                 touchY >= cardTopY && touchY <= cardTopY + cardHeight) {
                 return TouchedCard(card, pileIndex, cardIndex)
             }
         }
-        
+
         return null
     }
-    
+
     // Find which card was touched in the free cells
     private fun findTouchedFreeCell(touchX: Float, touchY: Float): Pair<Card, Int>? {
         for (i in 0 until 4) {
             val x = padding + i * (cardWidth + padding)
             val y = padding + topMargin
-            
+
             val card = gameEngine.gameState.freeCells[i] ?: continue
-            
+
             if (touchX >= x && touchX <= x + cardWidth &&
                 touchY >= y && touchY <= y + cardHeight) {
                 return Pair(card, i)
@@ -450,9 +458,9 @@ class FreecellGameView @JvmOverloads constructor(
         validFreeCellIndices.clear()
         validFoundationIndices.clear()
         validTableauIndices.clear()
-        
+
         val card = draggedCard ?: return
-        
+
         // Check free cells
         if (gameEngine.canMoveToFreeCell(gameEngine.gameState.freeCells)) {
             for (i in gameEngine.gameState.freeCells.indices) {
@@ -461,7 +469,7 @@ class FreecellGameView @JvmOverloads constructor(
                 }
             }
         }
-        
+
         // Check foundation piles
         val suitsOrder = Suit.values()
         for (i in suitsOrder.indices) {
@@ -471,12 +479,12 @@ class FreecellGameView @JvmOverloads constructor(
                 validFoundationIndices.add(i)
             }
         }
-        
+
         // Check tableau piles
         for (i in gameEngine.gameState.tableauPiles.indices) {
             // Skip the pile the card is coming from
             if (i == draggedCardOriginalPile) continue
-            
+
             val pile = gameEngine.gameState.tableauPiles[i]
             val topCard = pile.lastOrNull()
             if (gameEngine.canMoveToTableau(card, topCard)) {
@@ -484,20 +492,20 @@ class FreecellGameView @JvmOverloads constructor(
             }
         }
     }
-    
+
     // Find the destination with the most overlap with the dragged card
     private fun findDestinationUnderCard(viewX: Float, viewY: Float): Pair<DestinationType?, Int> {
         if (draggedCard == null) return Pair(null, -1)
-        
+
         val cardLeft = viewX - cardWidth / 2
         val cardTop = viewY - cardHeight / 2
         val cardRight = cardLeft + cardWidth
         val cardBottom = cardTop + cardHeight
-        
+
         var bestOverlap = 0f
         var bestType: DestinationType? = null
         var bestIndex = -1
-        
+
         // Check free cells
         for (index in validFreeCellIndices) {
             val cellX = padding + index * (cardWidth + padding)
@@ -507,14 +515,14 @@ class FreecellGameView @JvmOverloads constructor(
                 cardLeft, cardTop, cardRight, cardBottom,
                 cellX, cellY, cellX + cardWidth, cellY + cardHeight
             )
-            
+
             if (overlap > bestOverlap) {
                 bestOverlap = overlap
                 bestType = DestinationType.FREE_CELL
                 bestIndex = index
             }
         }
-        
+
         // Check foundation piles
         val suitsOrder = Suit.values()
         for (index in validFoundationIndices) {
@@ -525,14 +533,14 @@ class FreecellGameView @JvmOverloads constructor(
                 cardLeft, cardTop, cardRight, cardBottom,
                 x, y, x + cardWidth, y + cardHeight
             )
-            
+
             if (overlap > bestOverlap) {
                 bestOverlap = overlap
                 bestType = DestinationType.FOUNDATION
                 bestIndex = index
             }
         }
-        
+
         // Check tableau piles
         for (index in validTableauIndices) {
             val pile = gameEngine.gameState.tableauPiles[index]
@@ -544,19 +552,19 @@ class FreecellGameView @JvmOverloads constructor(
             } else {
                 y + (pile.size - 1) * tableauCardOffset
             }
-            
+
             val overlap = calculateRectOverlap(
                 cardLeft, cardTop, cardRight, cardBottom,
                 x, pileY, x + cardWidth, pileY + cardHeight
             )
-            
+
             if (overlap > bestOverlap) {
                 bestOverlap = overlap
                 bestType = DestinationType.TABLEAU
                 bestIndex = index
             }
         }
-        
+
         // Only return a destination if there's significant overlap (at least 25% of card area)
         val minOverlapThreshold = cardWidth * cardHeight * 0.25f
         return if (bestOverlap >= minOverlapThreshold) {
@@ -565,7 +573,7 @@ class FreecellGameView @JvmOverloads constructor(
             Pair(null, -1)
         }
     }
-    
+
     // Helper method to calculate the overlap area between two rectangles
     private fun calculateRectOverlap(
         r1Left: Float, r1Top: Float, r1Right: Float, r1Bottom: Float,
@@ -575,56 +583,56 @@ class FreecellGameView @JvmOverloads constructor(
         val overlapTop = maxOf(r1Top, r2Top)
         val overlapRight = minOf(r1Right, r2Right)
         val overlapBottom = minOf(r1Bottom, r2Bottom)
-        
+
         return if (overlapLeft < overlapRight && overlapTop < overlapBottom) {
             (overlapRight - overlapLeft) * (overlapBottom - overlapTop)
         } else {
             0f
         }
     }
-    
+
     // Animate the card returning to its original position
     private fun animateCardReturn() {
         val startX = dragX
         val startY = dragY
         val endX = draggedCardOriginalX
         val endY = draggedCardOriginalY
-        
+
         val animator = ValueAnimator.ofFloat(0f, 1f)
         animator.duration = 200 // Animation duration in milliseconds
         animator.interpolator = DecelerateInterpolator()
-        
+
         animator.addUpdateListener { animation ->
             val fraction = animation.animatedValue as Float
             dragX = startX + (endX - startX) * fraction
             dragY = startY + (endY - startY) * fraction
-            
+
             // When animation completes, clear the dragged card
             if (fraction >= 1f) {
                 draggedCard = null
                 draggedCardOriginalPile = -1
                 draggedCardOriginalIndex = -1
-                
+
                 // Clear valid destinations
                 validFreeCellIndices.clear()
                 validFoundationIndices.clear()
                 validTableauIndices.clear()
             }
-            
+
             // Force redraw of the entire view
             invalidate()
         }
-        
+
         animator.start()
     }
-    
+
     // Track if we're currently dragging
     private var isDragging = false
-    
+
     // Track the offset from touch point to card corner
     private var touchOffsetX = 0f
     private var touchOffsetY = 0f
-    
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -640,14 +648,14 @@ class FreecellGameView @JvmOverloads constructor(
                     draggedCardOriginalX = padding + touchedCard.pileIndex * (cardWidth + padding)
                     draggedCardOriginalY = (padding + cardHeight + padding * 2 + topMargin) +
                                          (touchedCard.cardIndex * tableauCardOffset)
-                    
+
                     // Find valid destinations for this card
                     findValidDestinations()
-                    
+
                     // Reset hovered destination
                     hoveredDestinationType = null
                     hoveredDestinationIndex = -1
-                    
+
                     // Tell the drag layer to start dragging
                     dragLayer?.let {
                         // Start dragging in the drag layer
@@ -659,7 +667,7 @@ class FreecellGameView @JvmOverloads constructor(
                             cardHeight
                         )
                     }
-                    
+
                     invalidate()
                     return true
                 } else {
@@ -667,24 +675,24 @@ class FreecellGameView @JvmOverloads constructor(
                     val touchedFreeCell = findTouchedFreeCell(event.x, event.y)
                     if (touchedFreeCell != null) {
                         val (card, cellIndex) = touchedFreeCell
-                        
+
                         // Start dragging from free cell
                         draggedCard = card
                         draggedCardSource = CardSource.FREE_CELL
                         draggedCardOriginalPile = cellIndex
                         draggedCardOriginalIndex = -1 // Not used for free cells
-                        
+
                         // Calculate original position for animation
                         draggedCardOriginalX = padding + cellIndex * (cardWidth + padding)
                         draggedCardOriginalY = padding + topMargin
-                        
+
                         // Find valid destinations for this card
                         findValidDestinations()
-                        
+
                         // Reset hovered destination
                         hoveredDestinationType = null
                         hoveredDestinationIndex = -1
-                        
+
                         // Tell the drag layer to start dragging
                         dragLayer?.let {
                             it.startDrag(
@@ -695,37 +703,37 @@ class FreecellGameView @JvmOverloads constructor(
                                 cardHeight
                             )
                         }
-                        
+
                         invalidate()
                         return true
                     }
                 }
             }
-            
+
             MotionEvent.ACTION_MOVE -> {
                 if (draggedCard != null) {
                     // Update drag position in drag layer
                     dragLayer?.updateDragPosition(event.rawX, event.rawY)
-                    
+
                     // Find destination under card
                     val loc = IntArray(2)
                     getLocationOnScreen(loc)
                     val viewX = event.rawX - loc[0]
                     val viewY = event.rawY - loc[1]
-                    
+
                     val (type, index) = findDestinationUnderCard(viewX, viewY)
-                    
+
                     // Update hovered destination if changed
                     if (type != hoveredDestinationType || index != hoveredDestinationIndex) {
                         hoveredDestinationType = type
                         hoveredDestinationIndex = index
                         invalidate()
                     }
-                    
+
                     return true
                 }
             }
-            
+
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (draggedCard != null) {
                     // Check if we're hovering over a valid destination
@@ -742,21 +750,21 @@ class FreecellGameView @JvmOverloads constructor(
 
                             draggedCardSource == CardSource.TABLEAU && hoveredDestinationType == DestinationType.TABLEAU ->
                                 gameEngine.moveFromTableauToTableau(draggedCardOriginalPile, hoveredDestinationIndex)
-                                
+
                             draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.TABLEAU ->
                                 gameEngine.moveFromFreeCellToTableau(draggedCardOriginalPile, hoveredDestinationIndex)
-                                
+
                             draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.FOUNDATION -> {
                                 val suit = Suit.values()[hoveredDestinationIndex]
                                 gameEngine.moveFromFreeCellToFoundation(draggedCardOriginalPile, suit)
                             }
-                            
+
                             draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.FREE_CELL ->
                                 gameEngine.moveFromFreeCellToFreeCell(draggedCardOriginalPile, hoveredDestinationIndex)
-                                
+
                             else -> false
                         }
-                        
+
                         if (moved) {
                             // Card was moved successfully, clean up
                             dragLayer?.stopDrag()
@@ -772,34 +780,34 @@ class FreecellGameView @JvmOverloads constructor(
                             return true
                         }
                     }
-                    
+
                     // If we get here, either there was no valid destination or the move failed
                     // Animate card back to its original position
                     val loc = IntArray(2)
                     getLocationOnScreen(loc)
                     val screenOriginalX = draggedCardOriginalX + loc[0]
                     val screenOriginalY = draggedCardOriginalY + loc[1]
-                    
+
                     dragLayer?.animateCardReturn(screenOriginalX, screenOriginalY) {
                         // When animation completes
                         draggedCard = null
                         draggedCardOriginalPile = -1
                         draggedCardOriginalIndex = -1
-                        
+
                         // Clear valid destinations and hovered destination
                         validFreeCellIndices.clear()
                         validFoundationIndices.clear()
                         validTableauIndices.clear()
                         hoveredDestinationType = null
                         hoveredDestinationIndex = -1
-                        
+
                         invalidate()
                     }
                     return true
                 }
             }
         }
-        
+
         return super.onTouchEvent(event)
     }
 }

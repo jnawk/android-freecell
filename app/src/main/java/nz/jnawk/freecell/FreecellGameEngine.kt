@@ -82,11 +82,11 @@ class FreecellGameEngine {
     fun moveFromTableauToTableau(fromPileIndex: Int, toPileIndex: Int): Boolean {
         val fromPile = gameState.tableauPiles[fromPileIndex]
         if (fromPile.isEmpty()) return false
-        
+
         val card = fromPile.last()
         val toPile = gameState.tableauPiles[toPileIndex]
         val topCard = toPile.lastOrNull()
-        
+
         if (canMoveToTableau(card, topCard)) {
             // Remove from source pile
             fromPile.removeAt(fromPile.size - 1)
@@ -94,7 +94,7 @@ class FreecellGameEngine {
             toPile.add(card)
             return true
         }
-        
+
         return false
     }
 
@@ -104,9 +104,9 @@ class FreecellGameEngine {
     fun moveFromTableauToFreeCell(fromPileIndex: Int, toCellIndex: Int): Boolean {
         val fromPile = gameState.tableauPiles[fromPileIndex]
         if (fromPile.isEmpty()) return false
-        
+
         val card = fromPile.last()
-        
+
         if (gameState.freeCells[toCellIndex] == null) {
             // Remove from source pile
             fromPile.removeAt(fromPile.size - 1)
@@ -114,7 +114,7 @@ class FreecellGameEngine {
             gameState.freeCells[toCellIndex] = card
             return true
         }
-        
+
         return false
     }
 
@@ -124,10 +124,10 @@ class FreecellGameEngine {
     fun moveFromTableauToFoundation(fromPileIndex: Int, toFoundationSuit: Suit): Boolean {
         val fromPile = gameState.tableauPiles[fromPileIndex]
         if (fromPile.isEmpty()) return false
-        
+
         val card = fromPile.last()
         val foundationPile = gameState.foundationPiles[toFoundationSuit]
-        
+
         if (canMoveToFoundation(card, foundationPile)) {
             // Remove from source pile
             fromPile.removeAt(fromPile.size - 1)
@@ -139,17 +139,17 @@ class FreecellGameEngine {
             }
             return true
         }
-        
+
         return false
     }
-    
+
     /**
      * Move a card from a free cell to a tableau pile.
      */
     fun moveFromFreeCellToTableau(fromCellIndex: Int, toPileIndex: Int): Boolean {
         val card = gameState.freeCells[fromCellIndex] ?: return false
         val toPile = gameState.tableauPiles[toPileIndex]
-        
+
         if (canMoveToTableau(card, toPile.lastOrNull())) {
             gameState.freeCells[fromCellIndex] = null
             toPile.add(card)
@@ -163,7 +163,7 @@ class FreecellGameEngine {
      */
     fun moveFromFreeCellToFoundation(fromCellIndex: Int, toFoundationSuit: Suit): Boolean {
         val card = gameState.freeCells[fromCellIndex] ?: return false
-        
+
         if (canMoveToFoundation(card, gameState.foundationPiles[toFoundationSuit])) {
             gameState.freeCells[fromCellIndex] = null
             // Add to foundation pile
@@ -183,7 +183,7 @@ class FreecellGameEngine {
      */
     fun moveFromFreeCellToFreeCell(fromCellIndex: Int, toCellIndex: Int): Boolean {
         val card = gameState.freeCells[fromCellIndex] ?: return false
-        
+
         if (gameState.freeCells[toCellIndex] == null) {
             gameState.freeCells[fromCellIndex] = null
             gameState.freeCells[toCellIndex] = card

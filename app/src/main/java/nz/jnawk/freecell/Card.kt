@@ -2,7 +2,7 @@ package nz.jnawk.freecell
 
 enum class Suit {
     HEARTS, DIAMONDS, CLUBS, SPADES;
-    
+
     fun getSymbol(): String {
         return when (this) {
             HEARTS -> "♥"
