@@ -32,7 +32,7 @@ class SupermoveUndoTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was successful
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
         assertEquals(0, sourcePile.size)
         assertEquals(3, destPile.size)
         assertEquals(Card(Suit.SPADES, Rank.TWO), destPile.last())
@@ -78,7 +78,7 @@ class SupermoveUndoTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was successful
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
         assertEquals(0, sourcePile.size)
         assertEquals(4, destPile.size)
         assertEquals(Card(Suit.HEARTS, Rank.TWO), destPile.last())
@@ -126,7 +126,7 @@ class SupermoveUndoTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was successful
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
         assertEquals(0, sourcePile.size)
         assertEquals(4, destPile.size)
         
@@ -171,7 +171,7 @@ class SupermoveUndoTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was successful
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
         assertEquals(0, sourcePile.size)
         assertEquals(4, destPile.size)
         

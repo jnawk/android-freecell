@@ -839,7 +839,8 @@ class FreecellGameView @JvmOverloads constructor(
                                 }
                                 
                                 // Try to move the sequence
-                                gameEngine.moveCardSequence(draggedCardOriginalPile, hoveredDestinationIndex, limitedIndices)
+                                val moveSteps = gameEngine.moveCardSequence(draggedCardOriginalPile, hoveredDestinationIndex, limitedIndices)
+                                moveSteps.isNotEmpty() // This will be true if the move was successful
                             }
 
                             draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.TABLEAU ->

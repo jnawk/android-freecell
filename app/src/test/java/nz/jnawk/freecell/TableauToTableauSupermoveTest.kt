@@ -31,7 +31,7 @@ class TableauToTableauSupermoveTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was successful
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
         assertEquals(0, sourcePile.size)
         assertEquals(2, destPile.size)
         assertEquals(Card(Suit.CLUBS, Rank.FIVE), destPile.last())
@@ -60,7 +60,7 @@ class TableauToTableauSupermoveTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was successful
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
         assertEquals(0, sourcePile.size)
         assertEquals(4, destPile.size)
         assertEquals(Card(Suit.CLUBS, Rank.THREE), destPile.last())
@@ -88,7 +88,7 @@ class TableauToTableauSupermoveTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was not successful
-        assertFalse(result)
+        assertTrue(result.isEmpty())
         assertEquals(2, sourcePile.size)
         assertEquals(1, destPile.size)
         assertEquals(0, gameEngine.moveCount)
@@ -125,7 +125,7 @@ class TableauToTableauSupermoveTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was not successful
-        assertFalse(result)
+        assertTrue(result.isEmpty())
         assertEquals(3, sourcePile.size)
         assertEquals(1, destPile.size)
         assertEquals(0, gameEngine.moveCount)
@@ -148,7 +148,7 @@ class TableauToTableauSupermoveTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
         
         // Verify the move was successful
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
         assertEquals(0, sourcePile.size)
         assertEquals(2, destPile.size)
         assertEquals(Card(Suit.DIAMONDS, Rank.QUEEN), destPile.last())

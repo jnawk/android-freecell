@@ -48,7 +48,7 @@ class PartialSequenceTest {
         val result = gameEngine.moveCardSequence(0, 1, singleCardIndices)
 
         // Verify the move succeeded
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
 
         // Verify the cards were moved correctly
         assertEquals(4, sourcePile.size) // 9♥, 8♠, 7♥, 6♠ remain
@@ -120,7 +120,7 @@ class PartialSequenceTest {
         val result = gameEngine.moveCardSequence(0, 1, movableIndices)
 
         // Verify the move failed due to resource constraints
-        assertFalse(result)
+        assertTrue(result.isEmpty())
 
         // Verify no cards were moved
         assertEquals(5, sourcePile.size)
@@ -161,7 +161,7 @@ class PartialSequenceTest {
         val result = gameEngine.moveCardSequence(0, 1, bottomTwoIndices)
 
         // This should succeed
-        assertTrue(result)
+        assertTrue(result.isNotEmpty())
 
         // Verify the cards were moved correctly
         assertEquals(3, sourcePile.size) // 9♣, 8♥, 7♣ remain

@@ -122,17 +122,26 @@ class FreecellGameEngine {
     }
 
     /**
+     * Represents a move in the Freecell game.
+     */
+    sealed class SupermoveStep {
+        data class TableauToTableau(val fromPileIndex: Int, val toPileIndex: Int, val card: Card) : SupermoveStep()
+        data class TableauToFreeCell(val fromPileIndex: Int, val toCellIndex: Int, val card: Card) : SupermoveStep()
+        data class FreeCellToTableau(val fromCellIndex: Int, val toPileIndex: Int, val card: Card) : SupermoveStep()
+    }
+
+    /**
      * Moves a sequence of cards from one tableau pile to another.
      * Each card is moved individually and recorded separately in the undo stack.
      * @param fromPileIndex The index of the source tableau pile
      * @param toPileIndex The index of the destination tableau pile
      * @param cardIndices The indices of the cards to move, in order from top to bottom
-     * @return True if the move was successful, false otherwise
+     * @return List of move steps if successful, empty list if the move failed
      */
-    fun moveCardSequence(fromPileIndex: Int, toPileIndex: Int, cardIndices: List<Int>): Boolean {
-        // If there are no cards to move, return false
+    fun moveCardSequence(fromPileIndex: Int, toPileIndex: Int, cardIndices: List<Int>): List<SupermoveStep> {
+        // If there are no cards to move, return empty list
         if (cardIndices.isEmpty()) {
-            return false
+            return emptyList()
         }
 
         val fromPile = gameState.tableauPiles[fromPileIndex]
@@ -140,12 +149,12 @@ class FreecellGameEngine {
 
         // Check if the sequence can be moved based on available resources
         if (!canMoveCardSequence(fromPileIndex, cardIndices)) {
-            return false
+            return emptyList()
         }
 
         if (fromPile.size < cardIndices.size) {
             // can't make this move if it's trying to move more cards than are present on the pile.
-            return false
+            return emptyList()
         }
 
         // Get the first card in the sequence (the one that will be placed on the destination)
@@ -155,7 +164,7 @@ class FreecellGameEngine {
 
         // Check if the card can be placed on the destination
         if (!canMoveToTableau(firstCard, topDestCard)) {
-            return false
+            return emptyList()
         }
 
         // For a single card move, just move it directly
@@ -166,7 +175,7 @@ class FreecellGameEngine {
             toPile.add(card)
             undoStack.push(Move.TableauToTableau(fromPileIndex, toPileIndex, card))
             moveCount++
-            return true
+            return listOf(SupermoveStep.TableauToTableau(fromPileIndex, toPileIndex, card))
         }
 
         // For multiple cards, we need to use free cells and empty tableau piles as temporary storage
@@ -174,20 +183,62 @@ class FreecellGameEngine {
     }
     
     /**
-     * Executes a supermove by breaking it down into individual card moves.
+     * Execute the moves in a supermove sequence.
+     * @param moves The list of move steps to execute
+     */
+    fun executeMoveSequence(moves: List<SupermoveStep>) {
+        for (move in moves) {
+            when (move) {
+                is SupermoveStep.TableauToTableau -> {
+                    val fromPile = gameState.tableauPiles[move.fromPileIndex]
+                    val toPile = gameState.tableauPiles[move.toPileIndex]
+                    val cardIndex = fromPile.indexOf(move.card)
+                    if (cardIndex != -1) {
+                        fromPile.removeAt(cardIndex)
+                        toPile.add(move.card)
+                        undoStack.push(Move.TableauToTableau(move.fromPileIndex, move.toPileIndex, move.card))
+                        moveCount++
+                    }
+                }
+                is SupermoveStep.TableauToFreeCell -> {
+                    val fromPile = gameState.tableauPiles[move.fromPileIndex]
+                    val cardIndex = fromPile.indexOf(move.card)
+                    if (cardIndex != -1) {
+                        fromPile.removeAt(cardIndex)
+                        gameState.freeCells[move.toCellIndex] = move.card
+                        undoStack.push(Move.TableauToFreeCell(move.fromPileIndex, move.toCellIndex, move.card))
+                        moveCount++
+                    }
+                }
+                is SupermoveStep.FreeCellToTableau -> {
+                    val card = gameState.freeCells[move.fromCellIndex]
+                    if (card == move.card) {
+                        gameState.freeCells[move.fromCellIndex] = null
+                        gameState.tableauPiles[move.toPileIndex].add(move.card)
+                        undoStack.push(Move.FreeCellToTableau(move.fromCellIndex, move.toPileIndex, move.card))
+                        moveCount++
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Calculates the sequence of moves needed for a supermove.
      * This simulates how a player would actually perform the moves.
      * @param fromPileIndex The index of the source tableau pile
      * @param toPileIndex The index of the destination tableau pile
      * @param cardIndices The indices of the cards to move, in order from top to bottom
-     * @return True if the move was successful, false otherwise
+     * @return List of move steps if successful, empty list if the move failed
      */
-    private fun executeSupermove(fromPileIndex: Int, toPileIndex: Int, cardIndices: List<Int>): Boolean {
+    private fun executeSupermove(fromPileIndex: Int, toPileIndex: Int, cardIndices: List<Int>): List<SupermoveStep> {
         val fromPile = gameState.tableauPiles[fromPileIndex]
+        val moves = mutableListOf<SupermoveStep>()
         
         // If we don't have enough resources, fail
         val maxMovableCards = calculateMaxMovableCards()
         if (cardIndices.size > maxMovableCards) {
-            return false
+            return emptyList()
         }
         
         // Get the cards to move
@@ -199,7 +250,7 @@ class FreecellGameEngine {
         val topDestCard = destPile.lastOrNull()
         
         if (!canMoveToTableau(firstCard, topDestCard)) {
-            return false
+            return emptyList()
         }
         
         // For a sequence like Q-J that we want to move to K:
@@ -226,62 +277,45 @@ class FreecellGameEngine {
             }
         }
         
-        // Move all cards except the first one to temporary storage
+        // Calculate the moves for all cards except the first one to temporary storage
         for (i in cardIndices.size - 1 downTo 1) {
             val cardIndex = cardIndices[i]
             val card = fromPile[cardIndex]
             
-            // Remove the card from the source pile
-            fromPile.removeAt(cardIndex)
-            
             // Store in a free cell or empty tableau
             if (availableFreeCells.isNotEmpty()) {
                 val freeCellIndex = availableFreeCells.removeAt(0)
-                gameState.freeCells[freeCellIndex] = card
-                undoStack.push(Move.TableauToFreeCell(fromPileIndex, freeCellIndex, card))
-                moveCount++
+                moves.add(SupermoveStep.TableauToFreeCell(fromPileIndex, freeCellIndex, card))
                 tempStorage.add(Pair(freeCellIndex, false))
             } else if (availableEmptyTableau.isNotEmpty()) {
                 val emptyTableauIndex = availableEmptyTableau.removeAt(0)
-                gameState.tableauPiles[emptyTableauIndex].add(card)
-                undoStack.push(Move.TableauToTableau(fromPileIndex, emptyTableauIndex, card))
-                moveCount++
+                moves.add(SupermoveStep.TableauToTableau(fromPileIndex, emptyTableauIndex, card))
                 tempStorage.add(Pair(emptyTableauIndex, true))
             } else {
                 // This shouldn't happen if we checked resources correctly
-                return false
+                return emptyList()
             }
         }
         
-        // Now move the first card to the destination
-        val firstCardIndex = cardIndices[0]
-        fromPile.removeAt(firstCardIndex)
-        destPile.add(firstCard)
-        undoStack.push(Move.TableauToTableau(fromPileIndex, toPileIndex, firstCard))
-        moveCount++
+        // Add move for the first card to the destination
+        moves.add(SupermoveStep.TableauToTableau(fromPileIndex, toPileIndex, firstCard))
         
-        // Now move cards from temporary storage to the destination
+        // Add moves from temporary storage to the destination
         // We need to move them in reverse order of how we stored them
         for (i in tempStorage.indices.reversed()) {
             val (storageIndex, isTableau) = tempStorage[i]
+            val card = cardsToMove[cardsToMove.size - 1 - i]
             if (isTableau) {
-                // Move from tableau to destination
-                val tempPile = gameState.tableauPiles[storageIndex]
-                val card = tempPile.removeAt(tempPile.size - 1)
-                destPile.add(card)
-                undoStack.push(Move.TableauToTableau(storageIndex, toPileIndex, card))
-                moveCount++
+                moves.add(SupermoveStep.TableauToTableau(storageIndex, toPileIndex, card))
             } else {
-                // Move from free cell to destination
-                val card = gameState.freeCells[storageIndex]!!
-                gameState.freeCells[storageIndex] = null
-                destPile.add(card)
-                undoStack.push(Move.FreeCellToTableau(storageIndex, toPileIndex, card))
-                moveCount++
+                moves.add(SupermoveStep.FreeCellToTableau(storageIndex, toPileIndex, card))
             }
         }
         
-        return true
+        // Execute all the moves
+        executeMoveSequence(moves)
+        
+        return moves
     }
 
     fun startNewGame() {
