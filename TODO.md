@@ -11,6 +11,20 @@
   - Allow dragging the entire sequence as one unit
   - Validate that the destination can accept the sequence (enough free cells available)
   - Implement the "Freecell power move" formula: (# empty freecells + 1) × 2^(# empty columns)
+  - Each card in a supermove counts as a separate move for the move counter
+  - Each card in a supermove is recorded separately in the undo stack
+  - Supermoves should move as many cards as possible within the constraints
+  - Highlight valid destinations that involve supermoves
+  - When highlighting a supermove destination, highlight the target card
+  - Animate cards moving during supermoves (to free cells, empty tableau, and back)
+  - Keep animations quick to maintain good gameplay experience
+  - Implementation plan:
+    - Add methods to detect valid card sequences in tableau piles
+    - Implement the power move formula to calculate max movable cards
+    - Extend move validation to check for supermove possibilities
+    - Update the UI to highlight supermove destinations
+    - Implement the card movement logic with proper animation
+    - Record each card movement separately for undo and move counting
 - [x] Implement move counter (Issue #7)
   - Increment counter for each valid move
   - Display the counter in the UI
