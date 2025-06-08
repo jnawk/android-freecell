@@ -37,6 +37,9 @@
   - Save game state before rotation
   - Restore game state after rotation
   - Prevent new game from being dealt on rotation
+- [ ] Improve win dialog button labels (Issue #12)
+  - Change "Deal Again" and "Close" buttons to "Yes" and "No" 
+  - Make them directly answer the question "Deal again?"
 
 ## Configuration
 - [ ] Configure data backup rules in `data_extraction_rules.xml` (Issue #5)
