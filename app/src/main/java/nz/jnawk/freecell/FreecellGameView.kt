@@ -87,6 +87,8 @@ class FreecellGameView @JvmOverloads constructor(
     private val validFreeCellIndices = mutableListOf<Int>()
     private val validFoundationIndices = mutableListOf<Int>()
     private val validTableauIndices = mutableListOf<Int>()
+    // Track the maximum sequence length that can be moved to each tableau destination
+    private val validTableauSequenceLengths = mutableMapOf<Int, Int>()
 
     // Track the currently hovered destination
     private var hoveredDestinationType: DestinationType? = null
@@ -202,6 +204,15 @@ class FreecellGameView @JvmOverloads constructor(
         // Don't draw the dragged card here - it's drawn in the drag layer
     }
 
+    // Add a paint for sequence length indicator
+    private val sequenceLengthPaint = Paint().apply {
+        color = Color.WHITE
+        textSize = 24f
+        textAlign = Paint.Align.CENTER
+        style = Paint.Style.FILL_AND_STROKE
+        strokeWidth = 2f
+    }
+    
     private fun drawValidDestinationHighlights(canvas: Canvas) {
         // Only draw highlights if a card is being dragged
         if (draggedCard == null) return
@@ -236,10 +247,32 @@ class FreecellGameView @JvmOverloads constructor(
             if (pile.isEmpty()) {
                 // Empty tableau pile
                 canvas.drawRect(x - 2, y - 2, x + cardWidth + 2, y + cardHeight + 2, paint)
+                
+                // Draw sequence length indicator if it's a sequence move
+                val sequenceLength = validTableauSequenceLengths[index] ?: 1
+                if (sequenceLength > 1) {
+                    canvas.drawText(
+                        sequenceLength.toString(),
+                        x + cardWidth / 2,
+                        y + cardHeight / 2,
+                        sequenceLengthPaint
+                    )
+                }
             } else {
                 // Non-empty tableau pile - highlight the bottom card
                 val lastCardY = y + (pile.size - 1) * tableauCardOffset
                 canvas.drawRect(x - 2, lastCardY - 2, x + cardWidth + 2, lastCardY + cardHeight + 2, paint)
+                
+                // Draw sequence length indicator if it's a sequence move
+                val sequenceLength = validTableauSequenceLengths[index] ?: 1
+                if (sequenceLength > 1) {
+                    canvas.drawText(
+                        sequenceLength.toString(),
+                        x + cardWidth / 2,
+                        lastCardY + cardHeight / 2,
+                        sequenceLengthPaint
+                    )
+                }
             }
         }
     }
@@ -427,30 +460,17 @@ class FreecellGameView @JvmOverloads constructor(
 
             val pileX = padding + pileIndex * (cardWidth + padding)
 
-            // Check all cards in the pile, not just the bottom one
-            for (cardIndex in pile.indices.reversed()) {
-                val card = pile[cardIndex]
-                val cardTopY = tableauStartY + (cardIndex * tableauCardOffset)
+            // Only check the bottom card of each pile
+            val cardIndex = pile.size - 1
+            val card = pile[cardIndex]
+            val cardTopY = tableauStartY + (cardIndex * tableauCardOffset)
 
-                // Check if touch is within this card's bounds
-                if (touchX >= pileX && touchX <= pileX + cardWidth &&
-                    touchY >= cardTopY && touchY <= cardTopY + cardHeight) {
-                    
-                    // Get movable indices to check if this card can be moved
-                    val movableIndices = gameEngine.getMovableCardIndices(pileIndex)
-                    
-                    // Only allow dragging if this card is part of a movable sequence
-                    if (movableIndices.contains(cardIndex)) {
-                        return TouchedCard(card, pileIndex, cardIndex)
-                    } else {
-                        // If not movable, check if it's the bottom card (always movable)
-                        if (cardIndex == pile.size - 1) {
-                            return TouchedCard(card, pileIndex, cardIndex)
-                        }
-                        // Otherwise, this card can't be dragged
-                        return null
-                    }
-                }
+            // Check if touch is within this card's bounds
+            if (touchX >= pileX && touchX <= pileX + cardWidth &&
+                touchY >= cardTopY && touchY <= cardTopY + cardHeight) {
+                
+                // Always allow dragging the bottom card
+                return TouchedCard(card, pileIndex, cardIndex)
             }
         }
 
@@ -479,40 +499,42 @@ class FreecellGameView @JvmOverloads constructor(
         validFreeCellIndices.clear()
         validFoundationIndices.clear()
         validTableauIndices.clear()
+        validTableauSequenceLengths.clear()
 
         val card = draggedCard ?: return
 
-        // If dragging from tableau, check if we're dragging a sequence
-        val isSequence = draggedCardSource == CardSource.TABLEAU && 
-                         draggedCardOriginalIndex < gameEngine.gameState.tableauPiles[draggedCardOriginalPile].size - 1
-        
-        // For sequences, only tableau piles are valid destinations
-        if (isSequence) {
-            // Check tableau piles for sequence moves
-            for (i in gameEngine.gameState.tableauPiles.indices) {
-                // Skip the pile the card is coming from
-                if (i == draggedCardOriginalPile) continue
-                
-                val pile = gameEngine.gameState.tableauPiles[i]
-                val topCard = pile.lastOrNull()
-                
-                // Get the movable indices from the source pile
-                val movableIndices = gameEngine.getMovableCardIndices(draggedCardOriginalPile)
-                
-                // Get the indices from the dragged card to the bottom of the pile
-                val cardIndices = movableIndices.dropWhile { it < draggedCardOriginalIndex }
-                
-                // Check if the sequence can be moved to this destination
-                if (cardIndices.isNotEmpty() && 
-                    gameEngine.canMoveToTableau(card, topCard) && 
-                    gameEngine.canMoveCardSequence(draggedCardOriginalPile, cardIndices)) {
-                    validTableauIndices.add(i)
+        // Since we now only allow dragging the bottom card, we can simplify this logic
+        if (draggedCardSource == CardSource.TABLEAU) {
+            // Find valid destinations for sequences
+            val validDestinations = gameEngine.findValidTableauDestinationsWithConstraints(draggedCardOriginalPile)
+            
+            // Add valid destinations to our list
+            validTableauIndices.addAll(validDestinations.keys)
+            validTableauSequenceLengths.putAll(validDestinations)
+            
+            // Check free cells for single card moves
+            if (gameEngine.canMoveToFreeCell(gameEngine.gameState.freeCells)) {
+                for (i in gameEngine.gameState.freeCells.indices) {
+                    if (gameEngine.gameState.freeCells[i] == null) {
+                        validFreeCellIndices.add(i)
+                    }
                 }
             }
+            
+            // Check foundation piles for single card moves
+            val suitsOrder = Suit.values()
+            for (i in suitsOrder.indices) {
+                val suit = suitsOrder[i]
+                val foundationPile = gameEngine.gameState.foundationPiles[suit]
+                if (gameEngine.canMoveToFoundation(card, foundationPile)) {
+                    validFoundationIndices.add(i)
+                }
+            }
+            
             return
         }
         
-        // For single cards, check all possible destinations
+        // For single cards (from free cells or non-sequence tableau cards)
         
         // Check free cells
         if (gameEngine.canMoveToFreeCell(gameEngine.gameState.freeCells)) {
@@ -542,6 +564,7 @@ class FreecellGameView @JvmOverloads constructor(
             val topCard = pile.lastOrNull()
             if (gameEngine.canMoveToTableau(card, topCard)) {
                 validTableauIndices.add(i)
+                validTableauSequenceLengths[i] = 1 // Single card move
             }
         }
     }
@@ -804,16 +827,19 @@ class FreecellGameView @JvmOverloads constructor(
                             draggedCardSource == CardSource.TABLEAU && hoveredDestinationType == DestinationType.TABLEAU -> {
                                 // Get the movable card indices for the source pile
                                 val movableIndices = gameEngine.getMovableCardIndices(draggedCardOriginalPile)
-                                // If the dragged card is the bottom card of a sequence, try to move the sequence
-                                if (movableIndices.isNotEmpty() && movableIndices.contains(draggedCardOriginalIndex)) {
-                                    // Get the indices from the dragged card to the bottom of the pile
-                                    val cardIndices = movableIndices.dropWhile { it < draggedCardOriginalIndex }
-                                    // Try to move the sequence
-                                    gameEngine.moveCardSequence(draggedCardOriginalPile, hoveredDestinationIndex, cardIndices)
+                                
+                                // Get the maximum sequence length that can be moved to this destination
+                                val maxSequenceLength = validTableauSequenceLengths[hoveredDestinationIndex] ?: 1
+                                
+                                // Limit the sequence to the maximum allowed length
+                                val limitedIndices = if (movableIndices.size > maxSequenceLength) {
+                                    movableIndices.takeLast(maxSequenceLength)
                                 } else {
-                                    // Fall back to single card move
-                                    gameEngine.moveFromTableauToTableau(draggedCardOriginalPile, hoveredDestinationIndex)
+                                    movableIndices
                                 }
+                                
+                                // Try to move the sequence
+                                gameEngine.moveCardSequence(draggedCardOriginalPile, hoveredDestinationIndex, limitedIndices)
                             }
 
                             draggedCardSource == CardSource.FREE_CELL && hoveredDestinationType == DestinationType.TABLEAU ->

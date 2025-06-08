@@ -180,7 +180,7 @@ class PartialSequenceTest {
     fun testComplexExample_MultipleValidDestinations() {
         // Setup: Create the complex example from the requirements
         // Tableau pile 1: ♥J, ♠10, ♥9, ♠8 (top to bottom)
-        val sourcePile = gameEngine.gameState.tableauPiles[0]
+        var sourcePile = gameEngine.gameState.tableauPiles[0]
         sourcePile.add(Card(Suit.HEARTS, Rank.JACK)) // J♥
         sourcePile.add(Card(Suit.SPADES, Rank.TEN)) // 10♠
         sourcePile.add(Card(Suit.HEARTS, Rank.NINE)) // 9♥
@@ -216,19 +216,27 @@ class PartialSequenceTest {
         // Reset for the next test
         gameEngine.gameState.reset()
         setUp()
+        sourcePile = gameEngine.gameState.tableauPiles[0]
+        assertTrue(sourcePile == gameEngine.gameState.tableauPiles[0])
+        assertTrue(sourcePile.isEmpty())
 
         // Setup the same scenario again
         sourcePile.add(Card(Suit.HEARTS, Rank.JACK)) // J♥
         sourcePile.add(Card(Suit.SPADES, Rank.TEN)) // 10♠
         sourcePile.add(Card(Suit.HEARTS, Rank.NINE)) // 9♥
         sourcePile.add(Card(Suit.SPADES, Rank.EIGHT)) // 8♠
+        assertFalse(sourcePile.isEmpty())
+
 
         destPile1.add(Card(Suit.CLUBS, Rank.QUEEN)) // Q♣
         destPile2.add(Card(Suit.DIAMONDS, Rank.NINE)) // 9♦
 
-        // Test: Moving to pile 3 (9♣) should work for just the bottom card (8♠)
-        val bottomCardIndex = movableIndices.last()
+        // Test: Moving to pile 3 (9♦) should work for just the bottom card (8♠)
+        val bottomCardIndex = sourcePile.size - 1  // This is the index of the bottom card (8♠)
         val result2 = gameEngine.moveCardSequence(0, 2, listOf(bottomCardIndex))
+
+        // Verify the move succeeded
+        assertTrue(result2)
 
         // Verify both moves should succeed
         assertTrue(result1)

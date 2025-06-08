@@ -74,8 +74,8 @@ class ValidDestinationsTest {
         // Leave pile 5 empty (should be valid for any card)
         gameEngine.gameState.tableauPiles[5].clear()
         
-        // Create a method to find valid tableau destinations for a card
-        val validDestinations = findValidTableauDestinations(0)
+        // Use the game engine's method to find valid tableau destinations for a card
+        val validDestinations = gameEngine.findValidTableauDestinations(0)
         
         // Test: Should find piles 1, 2, and 5 as valid destinations
         assertEquals(3, validDestinations.size)
@@ -109,9 +109,9 @@ class ValidDestinationsTest {
         // Leave pile 5 empty (should be valid for any card/sequence)
         gameEngine.gameState.tableauPiles[5].clear()
         
-        // Create a method to find valid tableau destinations for the sequence
-        val validDestinationsForSequence = findValidTableauDestinationsForSequence(0)
-        val validDestinationsForBottomCard = findValidTableauDestinationsForCard(0, 2) // 7♥
+        // Use the game engine's methods to find valid tableau destinations
+        val validDestinationsForSequence = gameEngine.findValidTableauDestinationsForSequence(0)
+        val validDestinationsForBottomCard = gameEngine.findValidTableauDestinationsForCard(0, 2) // 7♥
         
         // Test: Should find piles 1 and 5 as valid destinations for the sequence
         assertEquals(2, validDestinationsForSequence.size)
@@ -155,8 +155,8 @@ class ValidDestinationsTest {
         // With no empty free cells and 1 empty tableau:
         // Max movable cards = (0+1) × 2^1 = 2
         
-        // Create a method to find valid tableau destinations considering resource constraints
-        val validDestinationsForSequence = findValidTableauDestinationsWithConstraints(0)
+        // Use the game engine's method to find valid tableau destinations considering resource constraints
+        val validDestinationsForSequence = gameEngine.findValidTableauDestinationsWithConstraints(0)
         
         // Test: Should find pile 2 as valid destination for a 2-card subsequence (8♠, 7♥)
         // and pile 3 (empty) for any subsequence up to 2 cards
@@ -170,56 +170,5 @@ class ValidDestinationsTest {
     
 
     
-    // Helper method to find valid tableau destinations for a card in a pile
-    private fun findValidTableauDestinations(sourcePileIndex: Int): List<Int> {
-        val validDestinations = mutableListOf<Int>()
-        val sourcePile = gameEngine.gameState.tableauPiles[sourcePileIndex]
-        if (sourcePile.isEmpty()) return validDestinations
-        
-        val card = sourcePile.last()
-        
-        for (i in gameEngine.gameState.tableauPiles.indices) {
-            if (i == sourcePileIndex) continue // Skip source pile
-            
-            val destPile = gameEngine.gameState.tableauPiles[i]
-            val topCard = destPile.lastOrNull()
-            
-            if (gameEngine.canMoveToTableau(card, topCard)) {
-                validDestinations.add(i)
-            }
-        }
-        
-        return validDestinations
-    }
-    
-    // Helper method to find valid tableau destinations for a sequence
-    private fun findValidTableauDestinationsForSequence(sourcePileIndex: Int): List<Int> {
-        // This is a placeholder - the actual implementation would need to check
-        // if the sequence can be moved as a unit to each destination
-        return emptyList()
-    }
-    
-    // Helper method to find valid tableau destinations for a specific card in a pile
-    private fun findValidTableauDestinationsForCard(sourcePileIndex: Int, cardIndex: Int): List<Int> {
-        // This is a placeholder - the actual implementation would need to check
-        // if the specific card can be moved to each destination
-        return emptyList()
-    }
-    
-    // Helper method to find valid tableau destinations considering resource constraints
-    private fun findValidTableauDestinationsWithConstraints(sourcePileIndex: Int): List<Int> {
-        // This is a placeholder - the actual implementation would need to check
-        // resource constraints for moving sequences
-        return emptyList()
-    }
-    
-    // Helper class to represent a destination with the cards that would be moved there
-    private data class Destination(val pileIndex: Int, val cardsToMove: List<Card>)
-    
-    // Helper method to find valid tableau destinations for the bottom card of a pile
-    private fun findValidTableauDestinationsForBottomCard(sourcePileIndex: Int): Map<Int, Destination> {
-        // This is a placeholder - the actual implementation would need to determine
-        // which cards would be moved to each valid destination
-        return emptyMap()
-    }
+    // Use the game engine's methods for finding valid destinations
 }
