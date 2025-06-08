@@ -158,22 +158,129 @@ class FreecellGameEngine {
             return false
         }
 
-        // Store the cards to move
-        val cardsToMove = cardIndices.map { fromPile[it] }
-
-        // Remove cards from source pile (in reverse order to maintain indices)
-        for (i in cardIndices.size - 1 downTo 0) {
-            val cardIndex = cardIndices[i]
+        // For a single card move, just move it directly
+        if (cardIndices.size == 1) {
+            val cardIndex = cardIndices[0]
+            val card = fromPile[cardIndex]
             fromPile.removeAt(cardIndex)
-        }
-
-        // Add cards to destination pile and record each move
-        for (card in cardsToMove) {
             toPile.add(card)
             undoStack.push(Move.TableauToTableau(fromPileIndex, toPileIndex, card))
             moveCount++
+            return true
         }
 
+        // For multiple cards, we need to use free cells and empty tableau piles as temporary storage
+        return executeSupermove(fromPileIndex, toPileIndex, cardIndices)
+    }
+    
+    /**
+     * Executes a supermove by breaking it down into individual card moves.
+     * This simulates how a player would actually perform the moves.
+     * @param fromPileIndex The index of the source tableau pile
+     * @param toPileIndex The index of the destination tableau pile
+     * @param cardIndices The indices of the cards to move, in order from top to bottom
+     * @return True if the move was successful, false otherwise
+     */
+    private fun executeSupermove(fromPileIndex: Int, toPileIndex: Int, cardIndices: List<Int>): Boolean {
+        val fromPile = gameState.tableauPiles[fromPileIndex]
+        
+        // If we don't have enough resources, fail
+        val maxMovableCards = calculateMaxMovableCards()
+        if (cardIndices.size > maxMovableCards) {
+            return false
+        }
+        
+        // Get the cards to move
+        val cardsToMove = cardIndices.map { fromPile[it] }
+        
+        // Check if the first card can be placed on the destination
+        val firstCard = cardsToMove.first()
+        val destPile = gameState.tableauPiles[toPileIndex]
+        val topDestCard = destPile.lastOrNull()
+        
+        if (!canMoveToTableau(firstCard, topDestCard)) {
+            return false
+        }
+        
+        // For a sequence like Q-J that we want to move to K:
+        // 1. Move J to a free cell
+        // 2. Move Q to K
+        // 3. Move J from free cell to Q
+        
+        // First, move all cards except the first one to free cells
+        // We need to remove them in reverse order to maintain indices
+        val tempStorage = mutableListOf<Pair<Int, Boolean>>() // (index, isTableau)
+        
+        // Find available free cells and empty tableau piles
+        val availableFreeCells = mutableListOf<Int>()
+        for (i in gameState.freeCells.indices) {
+            if (gameState.freeCells[i] == null) {
+                availableFreeCells.add(i)
+            }
+        }
+        
+        val availableEmptyTableau = mutableListOf<Int>()
+        for (i in gameState.tableauPiles.indices) {
+            if (i != fromPileIndex && i != toPileIndex && gameState.tableauPiles[i].isEmpty()) {
+                availableEmptyTableau.add(i)
+            }
+        }
+        
+        // Move all cards except the first one to temporary storage
+        for (i in cardIndices.size - 1 downTo 1) {
+            val cardIndex = cardIndices[i]
+            val card = fromPile[cardIndex]
+            
+            // Remove the card from the source pile
+            fromPile.removeAt(cardIndex)
+            
+            // Store in a free cell or empty tableau
+            if (availableFreeCells.isNotEmpty()) {
+                val freeCellIndex = availableFreeCells.removeAt(0)
+                gameState.freeCells[freeCellIndex] = card
+                undoStack.push(Move.TableauToFreeCell(fromPileIndex, freeCellIndex, card))
+                moveCount++
+                tempStorage.add(Pair(freeCellIndex, false))
+            } else if (availableEmptyTableau.isNotEmpty()) {
+                val emptyTableauIndex = availableEmptyTableau.removeAt(0)
+                gameState.tableauPiles[emptyTableauIndex].add(card)
+                undoStack.push(Move.TableauToTableau(fromPileIndex, emptyTableauIndex, card))
+                moveCount++
+                tempStorage.add(Pair(emptyTableauIndex, true))
+            } else {
+                // This shouldn't happen if we checked resources correctly
+                return false
+            }
+        }
+        
+        // Now move the first card to the destination
+        val firstCardIndex = cardIndices[0]
+        fromPile.removeAt(firstCardIndex)
+        destPile.add(firstCard)
+        undoStack.push(Move.TableauToTableau(fromPileIndex, toPileIndex, firstCard))
+        moveCount++
+        
+        // Now move cards from temporary storage to the destination
+        // We need to move them in reverse order of how we stored them
+        for (i in tempStorage.indices.reversed()) {
+            val (storageIndex, isTableau) = tempStorage[i]
+            if (isTableau) {
+                // Move from tableau to destination
+                val tempPile = gameState.tableauPiles[storageIndex]
+                val card = tempPile.removeAt(tempPile.size - 1)
+                destPile.add(card)
+                undoStack.push(Move.TableauToTableau(storageIndex, toPileIndex, card))
+                moveCount++
+            } else {
+                // Move from free cell to destination
+                val card = gameState.freeCells[storageIndex]!!
+                gameState.freeCells[storageIndex] = null
+                destPile.add(card)
+                undoStack.push(Move.FreeCellToTableau(storageIndex, toPileIndex, card))
+                moveCount++
+            }
+        }
+        
         return true
     }
 
