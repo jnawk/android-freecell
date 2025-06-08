@@ -40,6 +40,13 @@
 - [ ] Improve win dialog button labels (Issue #12)
   - Change "Deal Again" and "Close" buttons to "Yes" and "No" 
   - Make them directly answer the question "Deal again?"
+- [ ] Skip confirmation for "New Game" when game is already won (Issue #13)
+  - When the game is won and the user opted not to deal again
+  - Clicking "New Game" should start a new game immediately without confirmation
+- [ ] Add victory animation (Issue #14)
+  - When the game is won, animate all cards flying away in random directions
+  - Add downward bias since cards are at the top of the screen
+  - Animation should last no more than 2 seconds
 
 ## Configuration
 - [ ] Configure data backup rules in `data_extraction_rules.xml` (Issue #5)
