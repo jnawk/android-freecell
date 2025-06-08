@@ -46,6 +46,42 @@ class FreecellGameEngine {
         
     // Undo stack to store moves for undo functionality
     private val undoStack = Stack<Move>()
+    
+    /**
+     * Returns a list of indices of cards that can be moved as a sequence from a tableau pile.
+     * The indices are returned in order from top to bottom of the movable sequence.
+     * @param pileIndex The index of the tableau pile to check
+     * @return List of indices of cards that can be moved, empty if none
+     */
+    fun getMovableCardIndices(pileIndex: Int): List<Int> {
+        val pile = gameState.tableauPiles[pileIndex]
+        if (pile.isEmpty()) {
+            return emptyList()
+        }
+        
+        val movableIndices = mutableListOf<Int>()
+        
+        // The bottom card is always movable
+        movableIndices.add(pile.size - 1)
+        
+        // Check for valid sequences from bottom up
+        for (i in pile.size - 2 downTo 0) {
+            val currentCard = pile[i]
+            val nextCard = pile[i + 1]
+            
+            // Check if cards form a valid sequence (alternating colors, descending ranks)
+            if (currentCard.isOppositeColor(nextCard) && 
+                currentCard.rank.value == nextCard.rank.value + 1) {
+                // Add this card to the beginning of our movable sequence
+                movableIndices.add(0, i)
+            } else {
+                // Sequence is broken
+                break
+            }
+        }
+        
+        return movableIndices
+    }
 
     fun startNewGame() {
         // 1. Reset the game state to ensure it's clean
