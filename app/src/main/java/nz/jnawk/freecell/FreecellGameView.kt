@@ -387,10 +387,25 @@ class FreecellGameView @JvmOverloads constructor(
         drawFullCard(canvas, card, x, y)
     }
 
+    // Move counter update listener
+    private var moveCounterUpdateListener: ((Int) -> Unit)? = null
+    
+    /**
+     * Set a listener to be notified when the move counter changes
+     */
+    fun setMoveCounterUpdateListener(listener: (Int) -> Unit) {
+        moveCounterUpdateListener = listener
+        // Update immediately with current count
+        listener(gameEngine.moveCount)
+    }
+    
     /**
      * Call this method when the game state changes and the view needs to be redrawn.
      */
     fun updateView() {
+        // Notify the move counter listener
+        moveCounterUpdateListener?.invoke(gameEngine.moveCount)
+        
         invalidate() // This tells Android to redraw the view by calling onDraw()
     }
 
@@ -767,6 +782,10 @@ class FreecellGameView @JvmOverloads constructor(
                             validFreeCellIndices.clear()
                             validFoundationIndices.clear()
                             validTableauIndices.clear()
+                            
+                            // Update move counter display
+                            moveCounterUpdateListener?.invoke(gameEngine.moveCount)
+                            
                             invalidate()
                             return true
                         }

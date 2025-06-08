@@ -4,10 +4,17 @@ package nz.jnawk.freecell
 
 class FreecellGameEngine {
     val gameState = GameState()
+    
+    // Move counter
+    var moveCount = 0
+        private set
 
     fun startNewGame() {
         // 1. Reset the game state to ensure it's clean
         gameState.reset()
+        
+        // Reset move counter
+        moveCount = 0
 
         // 2. Create a standard 52-card deck
         val deck = mutableListOf<Card>()
@@ -92,6 +99,8 @@ class FreecellGameEngine {
             fromPile.removeAt(fromPile.size - 1)
             // Add to destination pile
             toPile.add(card)
+            // Increment move counter
+            moveCount++
             return true
         }
 
@@ -112,6 +121,8 @@ class FreecellGameEngine {
             fromPile.removeAt(fromPile.size - 1)
             // Add to free cell
             gameState.freeCells[toCellIndex] = card
+            // Increment move counter
+            moveCount++
             return true
         }
 
@@ -137,6 +148,8 @@ class FreecellGameEngine {
             } else {
                 foundationPile.add(card)
             }
+            // Increment move counter
+            moveCount++
             return true
         }
 
@@ -153,6 +166,8 @@ class FreecellGameEngine {
         if (canMoveToTableau(card, toPile.lastOrNull())) {
             gameState.freeCells[fromCellIndex] = null
             toPile.add(card)
+            // Increment move counter
+            moveCount++
             return true
         }
         return false
@@ -173,6 +188,8 @@ class FreecellGameEngine {
             } else {
                 foundationPile.add(card)
             }
+            // Increment move counter
+            moveCount++
             return true
         }
         return false
@@ -187,6 +204,8 @@ class FreecellGameEngine {
         if (gameState.freeCells[toCellIndex] == null) {
             gameState.freeCells[fromCellIndex] = null
             gameState.freeCells[toCellIndex] = card
+            // Increment move counter
+            moveCount++
             return true
         }
         return false

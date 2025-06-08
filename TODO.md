@@ -11,7 +11,7 @@
   - Allow dragging the entire sequence as one unit
   - Validate that the destination can accept the sequence (enough free cells available)
   - Implement the "Freecell power move" formula: (# empty freecells + 1) × 2^(# empty columns)
-- [ ] Implement move counter (Issue #7)
+- [x] Implement move counter (Issue #7)
   - Increment counter for each valid move
   - Display the counter in the UI
   - Reset counter when starting a new game

@@ -1,11 +1,13 @@
 package nz.jnawk.freecell
 
 import android.app.AlertDialog
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.androidgamesdk.GameActivity
 
@@ -62,19 +64,43 @@ class MainActivity : GameActivity() {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             bottomMargin = 48 // Add margin to keep it above navigation buttons
         }
+        
+        // 6. Create Move Counter TextView
+        val moveCounterTextView = android.widget.TextView(this).apply {
+            text = "Moves: 0"
+            setTextColor(ContextCompat.getColor(context, android.R.color.white))
+            textSize = 18f // Size between card corner and center text
+            setShadowLayer(3f, 1f, 1f, Color.BLACK) // Add shadow for better visibility
+            
+            // Update the move counter text when the game state changes
+            gameView.setMoveCounterUpdateListener { count ->
+                text = "Moves: $count"
+            }
+        }
+        
+        // Create layout parameters for the move counter (positioned at top right)
+        val counterParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            topMargin = 24
+            rightMargin = 24
+        }
 
-        // 6. Add all views to the root layout
+        // 7. Add all views to the root layout
         rootLayout.addView(gameView)
         rootLayout.addView(dragLayer)
         rootLayout.addView(newGameButton, buttonParams)
+        rootLayout.addView(moveCounterTextView, counterParams)
 
-        // 7. Set up communication between views
+        // 8. Set up communication between views
         gameView.setDragLayer(dragLayer)
 
-        // 8. Set the root layout as content view
+        // 9. Set the root layout as content view
         setContentView(rootLayout)
 
-        // 9. Hide system UI elements for a more immersive game experience
+        // 10. Hide system UI elements for a more immersive game experience
         hideSystemUi()
     }
     
