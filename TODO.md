@@ -18,6 +18,7 @@
   - When highlighting a supermove destination, highlight the target card
   - Animate cards moving during supermoves (to free cells, empty tableau, and back)
   - Keep animations quick to maintain good gameplay experience
+  - Undoing a move counts as a move for the move counter
   - Implementation plan:
     - Add methods to detect valid card sequences in tableau piles
     - Implement the power move formula to calculate max movable cards
@@ -25,6 +26,23 @@
     - Update the UI to highlight supermove destinations
     - Implement the card movement logic with proper animation
     - Record each card movement separately for undo and move counting
+
+- [ ] Animate supermoves (Issue #16)
+  - Add animations for cards moving during supermoves
+  - Show each card moving individually to maintain visual clarity
+  - Ensure animations are quick enough to maintain good gameplay experience
+  - Animate cards moving to free cells and back during complex supermoves
+
+- [ ] Fix supermove card selection (Issue #17)
+  - Allow selecting the bottom card of a sequence to initiate a supermove
+  - When selecting the bottom card, move the entire valid sequence above it
+  - Maintain the ability to select cards in the middle of a sequence for more granular moves
+
+- [ ] Fix supermove undo functionality (Issue #18)
+  - Ensure cards are returned to their original positions in the correct order
+  - Fix the issue where cards are swapped or placed incorrectly during undo
+  - Ensure the undo animation matches the original move animation
+  - Maintain the proper sequence of cards after multiple undo operations
 - [x] Implement move counter (Issue #7)
   - Increment counter for each valid move
   - Display the counter in the UI

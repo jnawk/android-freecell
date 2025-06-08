@@ -82,6 +82,95 @@ class FreecellGameEngine {
         
         return movableIndices
     }
+    
+    /**
+     * Calculates the maximum number of cards that can be moved based on the Freecell power move formula:
+     * (# empty freecells + 1) × 2^(# empty columns)
+     * @return The maximum number of cards that can be moved
+     */
+    fun calculateMaxMovableCards(): Int {
+        // Count empty free cells
+        val emptyFreeCells = gameState.freeCells.count { it == null }
+        
+        // Count empty tableau columns
+        val emptyColumns = gameState.tableauPiles.count { it.isEmpty() }
+        
+        // Apply the formula: (# empty freecells + 1) × 2^(# empty columns)
+        return (emptyFreeCells + 1) * (1 shl emptyColumns) // 1 shl n is equivalent to 2^n
+    }
+    
+    /**
+     * Checks if a sequence of cards can be moved based on the current game state.
+     * @param pileIndex The index of the tableau pile containing the cards
+     * @param cardIndices The indices of the cards to move, in order from top to bottom
+     * @return True if the cards can be moved, false otherwise
+     */
+    fun canMoveCardSequence(pileIndex: Int, cardIndices: List<Int>): Boolean {
+        // If there are no cards to move, return false
+        if (cardIndices.isEmpty()) {
+            return false
+        }
+        
+        // If only moving one card, it's always allowed
+        if (cardIndices.size == 1) {
+            return true
+        }
+        
+        // Check if the number of cards to move exceeds the maximum allowed
+        val maxMovableCards = calculateMaxMovableCards()
+        return cardIndices.size <= maxMovableCards
+    }
+    
+    /**
+     * Moves a sequence of cards from one tableau pile to another.
+     * Each card is moved individually and recorded separately in the undo stack.
+     * @param fromPileIndex The index of the source tableau pile
+     * @param toPileIndex The index of the destination tableau pile
+     * @param cardIndices The indices of the cards to move, in order from top to bottom
+     * @return True if the move was successful, false otherwise
+     */
+    fun moveCardSequence(fromPileIndex: Int, toPileIndex: Int, cardIndices: List<Int>): Boolean {
+        // If there are no cards to move, return false
+        if (cardIndices.isEmpty()) {
+            return false
+        }
+        
+        val fromPile = gameState.tableauPiles[fromPileIndex]
+        val toPile = gameState.tableauPiles[toPileIndex]
+        
+        // Check if the sequence can be moved based on available resources
+        if (!canMoveCardSequence(fromPileIndex, cardIndices)) {
+            return false
+        }
+        
+        // Check if the destination is valid for the first card in the sequence
+        val firstCardIndex = cardIndices.first()
+        val firstCard = fromPile[firstCardIndex]
+        val topDestCard = toPile.lastOrNull()
+        
+        // Check if the card can be placed on the destination
+        if (!canMoveToTableau(firstCard, topDestCard)) {
+            return false
+        }
+        
+        // Store the cards to move
+        val cardsToMove = cardIndices.map { fromPile[it] }
+        
+        // Remove cards from source pile (in reverse order to maintain indices)
+        for (i in cardIndices.size - 1 downTo 0) {
+            val cardIndex = cardIndices[i]
+            fromPile.removeAt(cardIndex)
+        }
+        
+        // Add cards to destination pile and record each move
+        for (card in cardsToMove) {
+            toPile.add(card)
+            undoStack.push(Move.TableauToTableau(fromPileIndex, toPileIndex, card))
+            moveCount++
+        }
+        
+        return true
+    }
 
     fun startNewGame() {
         // 1. Reset the game state to ensure it's clean
@@ -125,9 +214,9 @@ class FreecellGameEngine {
      * Check if a card can be moved to a destination tableau pile.
      */
     fun canMoveToTableau(cardToMove: Card, destinationPileTopCard: Card?): Boolean {
-        // If destination pile is empty, then cards can be moved there
+        // If destination pile is empty, only Kings can be moved there
         if (destinationPileTopCard == null) {
-            return true
+            return cardToMove.rank == Rank.KING
         }
 
         // Card must be opposite color and one rank lower than the destination card
