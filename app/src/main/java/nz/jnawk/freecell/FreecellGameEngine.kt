@@ -1,6 +1,41 @@
 package nz.jnawk.freecell
 
-// No need to import java.util.Collections if using Kotlin's .shuffle() on MutableList
+import java.util.Stack
+
+/**
+ * Represents a move in the Freecell game for undo functionality.
+ */
+sealed class Move {
+    /**
+     * Move from tableau pile to another tableau pile.
+     */
+    data class TableauToTableau(val fromPileIndex: Int, val toPileIndex: Int, val card: Card) : Move()
+    
+    /**
+     * Move from tableau pile to a free cell.
+     */
+    data class TableauToFreeCell(val fromPileIndex: Int, val toCellIndex: Int, val card: Card) : Move()
+    
+    /**
+     * Move from tableau pile to a foundation pile.
+     */
+    data class TableauToFoundation(val fromPileIndex: Int, val toFoundationSuit: Suit, val card: Card) : Move()
+    
+    /**
+     * Move from free cell to a tableau pile.
+     */
+    data class FreeCellToTableau(val fromCellIndex: Int, val toPileIndex: Int, val card: Card) : Move()
+    
+    /**
+     * Move from free cell to a foundation pile.
+     */
+    data class FreeCellToFoundation(val fromCellIndex: Int, val toFoundationSuit: Suit, val card: Card) : Move()
+    
+    /**
+     * Move from one free cell to another.
+     */
+    data class FreeCellToFreeCell(val fromCellIndex: Int, val toCellIndex: Int, val card: Card) : Move()
+}
 
 class FreecellGameEngine {
     val gameState = GameState()
@@ -8,13 +43,17 @@ class FreecellGameEngine {
     // Move counter
     var moveCount = 0
         private set
+        
+    // Undo stack to store moves for undo functionality
+    private val undoStack = Stack<Move>()
 
     fun startNewGame() {
         // 1. Reset the game state to ensure it's clean
         gameState.reset()
         
-        // Reset move counter
+        // Reset move counter and clear undo stack
         moveCount = 0
+        undoStack.clear()
 
         // 2. Create a standard 52-card deck
         val deck = mutableListOf<Card>()
@@ -99,6 +138,8 @@ class FreecellGameEngine {
             fromPile.removeAt(fromPile.size - 1)
             // Add to destination pile
             toPile.add(card)
+            // Record move for undo
+            undoStack.push(Move.TableauToTableau(fromPileIndex, toPileIndex, card))
             // Increment move counter
             moveCount++
             return true
@@ -121,6 +162,8 @@ class FreecellGameEngine {
             fromPile.removeAt(fromPile.size - 1)
             // Add to free cell
             gameState.freeCells[toCellIndex] = card
+            // Record move for undo
+            undoStack.push(Move.TableauToFreeCell(fromPileIndex, toCellIndex, card))
             // Increment move counter
             moveCount++
             return true
@@ -148,6 +191,8 @@ class FreecellGameEngine {
             } else {
                 foundationPile.add(card)
             }
+            // Record move for undo
+            undoStack.push(Move.TableauToFoundation(fromPileIndex, toFoundationSuit, card))
             // Increment move counter
             moveCount++
             return true
@@ -166,6 +211,8 @@ class FreecellGameEngine {
         if (canMoveToTableau(card, toPile.lastOrNull())) {
             gameState.freeCells[fromCellIndex] = null
             toPile.add(card)
+            // Record move for undo
+            undoStack.push(Move.FreeCellToTableau(fromCellIndex, toPileIndex, card))
             // Increment move counter
             moveCount++
             return true
@@ -188,6 +235,8 @@ class FreecellGameEngine {
             } else {
                 foundationPile.add(card)
             }
+            // Record move for undo
+            undoStack.push(Move.FreeCellToFoundation(fromCellIndex, toFoundationSuit, card))
             // Increment move counter
             moveCount++
             return true
@@ -204,6 +253,8 @@ class FreecellGameEngine {
         if (gameState.freeCells[toCellIndex] == null) {
             gameState.freeCells[fromCellIndex] = null
             gameState.freeCells[toCellIndex] = card
+            // Record move for undo
+            undoStack.push(Move.FreeCellToFreeCell(fromCellIndex, toCellIndex, card))
             // Increment move counter
             moveCount++
             return true
@@ -220,5 +271,77 @@ class FreecellGameEngine {
         return gameState.foundationPiles.all { (_, pile) -> 
             pile.size == 13 && pile.last().rank == Rank.KING
         }
+    }
+    
+    /**
+     * Check if an undo operation is available.
+     */
+    fun canUndo(): Boolean {
+        return undoStack.isNotEmpty()
+    }
+    
+    /**
+     * Undo the last move.
+     * @return true if a move was undone, false if there are no moves to undo
+     */
+    fun undo(): Boolean {
+        if (undoStack.isEmpty()) {
+            return false
+        }
+        
+        val lastMove = undoStack.pop()
+        
+        when (lastMove) {
+            is Move.TableauToTableau -> {
+                // Remove card from destination pile
+                val toPile = gameState.tableauPiles[lastMove.toPileIndex]
+                toPile.removeAt(toPile.size - 1)
+                // Add card back to source pile
+                gameState.tableauPiles[lastMove.fromPileIndex].add(lastMove.card)
+            }
+            
+            is Move.TableauToFreeCell -> {
+                // Remove card from free cell
+                gameState.freeCells[lastMove.toCellIndex] = null
+                // Add card back to tableau pile
+                gameState.tableauPiles[lastMove.fromPileIndex].add(lastMove.card)
+            }
+            
+            is Move.TableauToFoundation -> {
+                // Remove card from foundation pile
+                val foundationPile = gameState.foundationPiles[lastMove.toFoundationSuit]!!
+                foundationPile.removeAt(foundationPile.size - 1)
+                // Add card back to tableau pile
+                gameState.tableauPiles[lastMove.fromPileIndex].add(lastMove.card)
+            }
+            
+            is Move.FreeCellToTableau -> {
+                // Remove card from tableau pile
+                val toPile = gameState.tableauPiles[lastMove.toPileIndex]
+                toPile.removeAt(toPile.size - 1)
+                // Add card back to free cell
+                gameState.freeCells[lastMove.fromCellIndex] = lastMove.card
+            }
+            
+            is Move.FreeCellToFoundation -> {
+                // Remove card from foundation pile
+                val foundationPile = gameState.foundationPiles[lastMove.toFoundationSuit]!!
+                foundationPile.removeAt(foundationPile.size - 1)
+                // Add card back to free cell
+                gameState.freeCells[lastMove.fromCellIndex] = lastMove.card
+            }
+            
+            is Move.FreeCellToFreeCell -> {
+                // Remove card from destination free cell
+                gameState.freeCells[lastMove.toCellIndex] = null
+                // Add card back to source free cell
+                gameState.freeCells[lastMove.fromCellIndex] = lastMove.card
+            }
+        }
+        
+        // Increment move counter for the undo action
+        moveCount++
+        
+        return true
     }
 }

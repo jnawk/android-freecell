@@ -56,13 +56,37 @@ class MainActivity : GameActivity() {
             }
         }
         
-        // Create layout parameters for the button (positioned at bottom center)
+        // 6. Create Undo button
+        val undoButton = Button(this).apply {
+            text = "Undo"
+            setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_orange_dark))
+            setTextColor(ContextCompat.getColor(context, android.R.color.white))
+            alpha = 0.8f
+            
+            // Set click listener
+            setOnClickListener {
+                if (gameEngine.undo()) {
+                    gameView.updateView()
+                }
+            }
+        }
+        
+        // Create layout parameters for the buttons (positioned at bottom)
         val buttonParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             bottomMargin = 48 // Add margin to keep it above navigation buttons
+        }
+        
+        val undoButtonParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.END
+            bottomMargin = 48 // Add margin to keep it above navigation buttons
+            rightMargin = 48 // Add margin from the right edge
         }
         
         // 6. Create Move Counter TextView
@@ -92,6 +116,7 @@ class MainActivity : GameActivity() {
         rootLayout.addView(gameView)
         rootLayout.addView(dragLayer)
         rootLayout.addView(newGameButton, buttonParams)
+        rootLayout.addView(undoButton, undoButtonParams)
         rootLayout.addView(moveCounterTextView, counterParams)
 
         // 8. Set up communication between views

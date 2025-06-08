@@ -16,9 +16,15 @@
   - Display the counter in the UI
   - Reset counter when starting a new game
 - [ ] Implement undo stack (Issue #8)
-  - Store each move in an undo stack
-  - Implement undo functionality to revert to previous game states
-  - Provide a UI element to trigger undo
+  - Store each move in an undo stack with unlimited history
+  - Implementation plan:
+    - Add a Move data class to store move type, source, destination, and card
+    - Add an undo stack to FreecellGameEngine (Stack<Move>)
+    - Record each move in the stack when it's made
+    - Implement an undo method that pops the last move and reverses it
+    - Add a UI button to trigger the undo action
+  - Memory usage is minimal (approximately 32-36 bytes per move)
+  - Even 500 moves would only use about 16-18 KB of memory
 - [ ] Detect when a game is "stuck" (Issue #10)
   - Analyze the current game state to determine if any valid moves remain
   - Notify the player when they are stuck
