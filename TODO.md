@@ -1,7 +1,7 @@
 # TODO List for Android Freecell
 
 ## Game Logic
-- [ ] Implement win condition check in `FreecellGameEngine.kt` (Issue #4)
+- [x] Implement win condition check in `FreecellGameEngine.kt` (Issue #4)
   - Check if all foundation piles are complete (King on top for each suit)
 - [x] Fix bug with card movements from free cells to tableau (Issue #3)
   - Queens in free cells cannot be moved to legal King positions in tableau

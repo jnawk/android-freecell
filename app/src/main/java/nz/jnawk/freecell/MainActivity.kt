@@ -116,6 +116,23 @@ class MainActivity : GameActivity() {
             .setNegativeButton("No", null)
             .show()
     }
+    
+    /**
+     * Show a dialog when the player wins the game
+     */
+    fun showWinDialog(moveCount: Int) {
+        AlertDialog.Builder(this)
+            .setTitle("Congratulations!")
+            .setMessage("Well done, you completed the game in $moveCount moves.")
+            .setPositiveButton("Deal Again") { _, _ ->
+                // Start a new game
+                gameEngine.startNewGame()
+                gameView.updateView()
+            }
+            .setNegativeButton("Close", null)
+            .setCancelable(false) // Prevent dismissing by tapping outside
+            .show()
+    }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)

@@ -786,6 +786,12 @@ class FreecellGameView @JvmOverloads constructor(
                             // Update move counter display
                             moveCounterUpdateListener?.invoke(gameEngine.moveCount)
                             
+                            // Check if the game has been won
+                            if (gameEngine.checkWinCondition()) {
+                                // Notify the activity that the game has been won
+                                (context as? MainActivity)?.showWinDialog(gameEngine.moveCount)
+                            }
+                            
                             invalidate()
                             return true
                         }

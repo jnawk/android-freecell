@@ -212,11 +212,13 @@ class FreecellGameEngine {
     }
 
     /**
-     * Placeholder for checking the win condition.
+     * Check if the game has been won.
+     * The game is won when all cards are in the foundation piles.
      */
     fun checkWinCondition(): Boolean {
-        // TODO: Check if all foundation piles are complete (King on top for each suit)
-        // Example: gameState.foundationPiles.all { it.value.lastOrNull()?.rank == Rank.KING }
-        return false // Placeholder
+        // Check if all foundation piles have 13 cards (Ace through King)
+        return gameState.foundationPiles.all { (_, pile) -> 
+            pile.size == 13 && pile.last().rank == Rank.KING
+        }
     }
 }
