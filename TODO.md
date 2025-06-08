@@ -15,7 +15,7 @@
   - Increment counter for each valid move
   - Display the counter in the UI
   - Reset counter when starting a new game
-- [ ] Implement undo stack (Issue #8)
+- [x] Implement undo stack (Issue #8)
   - Store each move in an undo stack with unlimited history
   - Implementation plan:
     - Add a Move data class to store move type, source, destination, and card
@@ -29,6 +29,11 @@
   - Analyze the current game state to determine if any valid moves remain
   - Notify the player when they are stuck
   - Offer options (restart, new game, undo)
+- [ ] Animate undo operations (Issue #15)
+  - Add smooth animations when undoing moves
+  - Cards should visually move back to their original positions
+  - If user presses undo while an animation is in progress, complete the current animation immediately and start the next one
+  - Ensure animations are fast enough not to slow down gameplay
 
 ## UI Improvements
 - [x] Fix clipping of cards at the bottom of tall tableau piles (Issue #1)
