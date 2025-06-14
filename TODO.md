@@ -44,7 +44,7 @@
   - When selecting the bottom card, move the entire valid sequence above it
   - Maintain the ability to select cards in the middle of a sequence for more granular moves
 
-- [ ] Fix supermove undo functionality (Issue #18)
+- [x] Fix supermove undo functionality (Issue #18)
   - Ensure cards are returned to their original positions in the correct order
   - Fix the issue where cards are swapped or placed incorrectly during undo
   - Ensure the undo animation matches the original move animation
@@ -67,10 +67,9 @@
   - Analyze the current game state to determine if any valid moves remain
   - Notify the player when they are stuck
   - Offer options (restart, new game, undo)
-- [ ] Animate undo operations (Issue #15)
+- [x] Animate undo operations (Issue #15)
   - Add smooth animations when undoing moves
   - Cards should visually move back to their original positions
-  - If user presses undo while an animation is in progress, complete the current animation immediately and start the next one
   - Ensure animations are fast enough not to slow down gameplay
 
 ## UI Improvements
