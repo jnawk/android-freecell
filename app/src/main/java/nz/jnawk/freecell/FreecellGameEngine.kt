@@ -101,11 +101,10 @@ class FreecellGameEngine {
 
     /**
      * Checks if a sequence of cards can be moved based on the current game state.
-     * @param pileIndex The index of the tableau pile containing the cards
      * @param cardIndices The indices of the cards to move, in order from top to bottom
      * @return True if the cards can be moved, false otherwise
      */
-    fun canMoveCardSequence(pileIndex: Int, cardIndices: List<Int>): Boolean {
+    fun canMoveCardSequence(cardIndices: List<Int>): Boolean {
         // If there are no cards to move, return false
         if (cardIndices.isEmpty()) {
             return false
@@ -148,7 +147,7 @@ class FreecellGameEngine {
         val toPile = gameState.tableauPiles[toPileIndex]
 
         // Check if the sequence can be moved based on available resources
-        if (!canMoveCardSequence(fromPileIndex, cardIndices)) {
+        if (!canMoveCardSequence(cardIndices)) {
             return emptyList()
         }
 
