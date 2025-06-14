@@ -6,6 +6,12 @@
 - [x] Fix bug with card movements from free cells to tableau (Issue #3)
   - Queens in free cells cannot be moved to legal King positions in tableau
   - Jacks in free cells cannot be moved to legal Queen positions in tableau
+- [ ] Refactor: Use sealed classes instead of marker interfaces for animation types (Issue #19)
+  - Replace marker interfaces (Source, Destination) with sealed classes
+  - Provide more type safety and make relationships between types more explicit
+- [ ] Refactor: Organize animation classes into subpackages (Issue #20)
+  - Organize related animation classes into subpackages
+  - Avoid name conflicts and improve code organization
 - [ ] Implement supermoves (Issue #6)
   - Detect when multiple cards form a valid sequence (alternating colors, descending ranks)
   - Allow dragging the entire sequence as one unit
