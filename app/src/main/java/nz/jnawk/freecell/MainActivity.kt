@@ -65,9 +65,16 @@ class MainActivity : GameActivity() {
             
             // Set click listener
             setOnClickListener {
-                if (gameEngine.undo()) {
-                    gameView.updateView()
-                }
+                // Use the animated undo function instead of the regular one
+                gameEngine.undoWithAnimation(
+                    { card, source, dest, onComplete -> 
+                        gameView.animateCardMovement(card, source, dest, onComplete)
+                    },
+                    { 
+                        // Update the view after animation completes
+                        gameView.updateView() 
+                    }
+                )
             }
         }
         

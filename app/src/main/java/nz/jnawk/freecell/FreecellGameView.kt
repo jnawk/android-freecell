@@ -441,6 +441,99 @@ class FreecellGameView @JvmOverloads constructor(
         
         invalidate() // This tells Android to redraw the view by calling onDraw()
     }
+    
+    /**
+     * Animate a card moving from one position to another.
+     * @param card The card to animate
+     * @param sourceLocation The source location of the card
+     * @param destLocation The destination location of the card
+     * @param onComplete Callback to execute when animation completes
+     */
+    fun animateCardMovement(
+        card: Card,
+        sourceLocation: CardLocation<Source>,
+        destLocation: CardLocation<Destination>,
+        onComplete: () -> Unit
+    ) {
+        // Calculate source position
+        val (fromX, fromY) = when (sourceLocation) {
+            is CardLocation.Tableau -> {
+                val pileIndex = sourceLocation.pileIndex
+                val pile = gameEngine.gameState.tableauPiles[pileIndex]
+                val x = padding + pileIndex * (cardWidth + padding)
+                val y = padding + cardHeight + padding * 2 + topMargin + 
+                        (pile.size - 1) * tableauCardOffset
+                Pair(x + cardWidth/2, y + cardHeight/2)
+            }
+            is CardLocation.FreeCell -> {
+                val cellIndex = sourceLocation.cellIndex
+                val x = padding + cellIndex * (cardWidth + padding)
+                val y = padding + topMargin
+                Pair(x + cardWidth/2, y + cardHeight/2)
+            }
+            is CardLocation.Foundation -> {
+                val suit = sourceLocation.suit
+                val suitsOrder = Suit.values()
+                val foundationIndex = suitsOrder.indexOf(suit)
+                val x = padding + (4 * (cardWidth + padding)) + foundationIndex * (cardWidth + padding)
+                val y = padding + topMargin
+                Pair(x + cardWidth/2, y + cardHeight/2)
+            }
+        }
+        
+        // Calculate destination position
+        val (toX, toY) = when (destLocation) {
+            is CardLocation.Tableau -> {
+                val pileIndex = destLocation.pileIndex
+                val pile = gameEngine.gameState.tableauPiles[pileIndex]
+                val x = padding + pileIndex * (cardWidth + padding)
+                val y = padding + cardHeight + padding * 2 + topMargin + 
+                        pile.size * tableauCardOffset
+                Pair(x + cardWidth/2, y + cardHeight/2)
+            }
+            is CardLocation.FreeCell -> {
+                val cellIndex = destLocation.cellIndex
+                val x = padding + cellIndex * (cardWidth + padding)
+                val y = padding + topMargin
+                Pair(x + cardWidth/2, y + cardHeight/2)
+            }
+            is CardLocation.Foundation -> {
+                val suit = destLocation.suit
+                val suitsOrder = Suit.values()
+                val foundationIndex = suitsOrder.indexOf(suit)
+                val x = padding + (4 * (cardWidth + padding)) + foundationIndex * (cardWidth + padding)
+                val y = padding + topMargin
+                Pair(x + cardWidth/2, y + cardHeight/2)
+            }
+        }
+        
+        // Create a temporary card in the drag layer
+        dragLayer?.startDrag(card, fromX, fromY, cardWidth, cardHeight)
+        
+        // Animate the card to its destination
+        val animator = ValueAnimator.ofFloat(0f, 1f)
+        animator.duration = 150 // Animation duration in milliseconds - keep it quick
+        animator.interpolator = DecelerateInterpolator()
+        
+        animator.addUpdateListener { animation ->
+            val fraction = animation.animatedValue as Float
+            val currentX = fromX + (toX - fromX) * fraction
+            val currentY = fromY + (toY - fromY) * fraction
+            
+            // Update the card position in the drag layer
+            dragLayer?.updateDragPosition(currentX, currentY)
+            
+            // When animation completes
+            if (fraction >= 1f) {
+                // Remove the temporary card from the drag layer
+                dragLayer?.stopDrag()
+                // Execute the completion callback
+                onComplete()
+            }
+        }
+        
+        animator.start()
+    }
 
     // Helper class to store touched card information
     private data class TouchedCard(

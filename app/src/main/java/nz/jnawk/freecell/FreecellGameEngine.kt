@@ -181,7 +181,7 @@ class FreecellGameEngine {
         // For multiple cards, we need to use free cells and empty tableau piles as temporary storage
         return executeSupermove(fromPileIndex, toPileIndex, cardIndices)
     }
-    
+
     /**
      * Execute the moves in a supermove sequence.
      * @param moves The list of move steps to execute
@@ -222,7 +222,7 @@ class FreecellGameEngine {
             }
         }
     }
-    
+
     /**
      * Calculates the sequence of moves needed for a supermove.
      * This simulates how a player would actually perform the moves.
@@ -234,34 +234,34 @@ class FreecellGameEngine {
     private fun executeSupermove(fromPileIndex: Int, toPileIndex: Int, cardIndices: List<Int>): List<SupermoveStep> {
         val fromPile = gameState.tableauPiles[fromPileIndex]
         val moves = mutableListOf<SupermoveStep>()
-        
+
         // If we don't have enough resources, fail
         val maxMovableCards = calculateMaxMovableCards()
         if (cardIndices.size > maxMovableCards) {
             return emptyList()
         }
-        
+
         // Get the cards to move
         val cardsToMove = cardIndices.map { fromPile[it] }
-        
+
         // Check if the first card can be placed on the destination
         val firstCard = cardsToMove.first()
         val destPile = gameState.tableauPiles[toPileIndex]
         val topDestCard = destPile.lastOrNull()
-        
+
         if (!canMoveToTableau(firstCard, topDestCard)) {
             return emptyList()
         }
-        
+
         // For a sequence like Q-J that we want to move to K:
         // 1. Move J to a free cell
         // 2. Move Q to K
         // 3. Move J from free cell to Q
-        
+
         // First, move all cards except the first one to free cells
         // We need to remove them in reverse order to maintain indices
         val tempStorage = mutableListOf<Pair<Int, Boolean>>() // (index, isTableau)
-        
+
         // Find available free cells and empty tableau piles
         val availableFreeCells = mutableListOf<Int>()
         for (i in gameState.freeCells.indices) {
@@ -269,19 +269,19 @@ class FreecellGameEngine {
                 availableFreeCells.add(i)
             }
         }
-        
+
         val availableEmptyTableau = mutableListOf<Int>()
         for (i in gameState.tableauPiles.indices) {
             if (i != fromPileIndex && i != toPileIndex && gameState.tableauPiles[i].isEmpty()) {
                 availableEmptyTableau.add(i)
             }
         }
-        
+
         // Calculate the moves for all cards except the first one to temporary storage
         for (i in cardIndices.size - 1 downTo 1) {
             val cardIndex = cardIndices[i]
             val card = fromPile[cardIndex]
-            
+
             // Store in a free cell or empty tableau
             if (availableFreeCells.isNotEmpty()) {
                 val freeCellIndex = availableFreeCells.removeAt(0)
@@ -296,10 +296,10 @@ class FreecellGameEngine {
                 return emptyList()
             }
         }
-        
+
         // Add move for the first card to the destination
         moves.add(SupermoveStep.TableauToTableau(fromPileIndex, toPileIndex, firstCard))
-        
+
         // Add moves from temporary storage to the destination
         // We need to move them in reverse order of how we stored them
         for (i in tempStorage.indices.reversed()) {
@@ -311,10 +311,10 @@ class FreecellGameEngine {
                 moves.add(SupermoveStep.FreeCellToTableau(storageIndex, toPileIndex, card))
             }
         }
-        
+
         // Execute all the moves
         executeMoveSequence(moves)
-        
+
         return moves
     }
 
@@ -616,6 +616,158 @@ class FreecellGameEngine {
         return true
     }
 
+    /**
+     * Undo the last move with animation.
+     * @param animateCard Function to animate a card movement
+     * @param onComplete Callback to execute when all animations are complete
+     * @return true if a move was undone, false if there are no moves to undo
+     */
+    fun undoWithAnimation(
+        animateCard: (Card, CardLocation<Source>, CardLocation<nz.jnawk.freecell.Destination>, () -> Unit) -> Unit,
+        onComplete: () -> Unit
+    ): Boolean {
+        if (undoStack.isEmpty()) {
+            onComplete()
+            return false
+        }
+
+        val lastMove = undoStack.pop()
+
+        when (lastMove) {
+            is Move.TableauToTableau -> {
+                // Get source and destination locations
+                val sourceLocation = CardLocation.Tableau<Source>(lastMove.toPileIndex)
+                val destLocation = CardLocation.Tableau<nz.jnawk.freecell.Destination>(lastMove.fromPileIndex)
+
+                // Remove card from source pile
+                val toPile = gameState.tableauPiles[lastMove.toPileIndex]
+                toPile.removeAt(toPile.size - 1)
+
+                // Animate the card movement
+                animateCard(lastMove.card, sourceLocation, destLocation) {
+                    // Add card to destination pile after animation completes
+                    gameState.tableauPiles[lastMove.fromPileIndex].add(lastMove.card)
+
+                    // Increment move counter for the undo action
+                    moveCount++
+
+                    // Complete the undo operation
+                    onComplete()
+                }
+            }
+
+            is Move.TableauToFreeCell -> {
+                // Get source and destination locations
+                val sourceLocation = CardLocation.FreeCell<Source>(lastMove.toCellIndex)
+                val destLocation = CardLocation.Tableau<nz.jnawk.freecell.Destination>(lastMove.fromPileIndex)
+
+                // Remove card from free cell
+                gameState.freeCells[lastMove.toCellIndex] = null
+
+                // Animate the card movement
+                animateCard(lastMove.card, sourceLocation, destLocation) {
+                    // Add card to destination pile after animation completes
+                    gameState.tableauPiles[lastMove.fromPileIndex].add(lastMove.card)
+
+                    // Increment move counter for the undo action
+                    moveCount++
+
+                    // Complete the undo operation
+                    onComplete()
+                }
+            }
+
+            is Move.TableauToFoundation -> {
+                // Get source and destination locations
+                val sourceLocation = CardLocation.Foundation<Source>(lastMove.toFoundationSuit)
+                val destLocation = CardLocation.Tableau<nz.jnawk.freecell.Destination>(lastMove.fromPileIndex)
+
+                // Remove card from foundation pile
+                val foundationPile = gameState.foundationPiles[lastMove.toFoundationSuit]!!
+                foundationPile.removeAt(foundationPile.size - 1)
+
+                // Animate the card movement
+                animateCard(lastMove.card, sourceLocation, destLocation) {
+                    // Add card to destination pile after animation completes
+                    gameState.tableauPiles[lastMove.fromPileIndex].add(lastMove.card)
+
+                    // Increment move counter for the undo action
+                    moveCount++
+
+                    // Complete the undo operation
+                    onComplete()
+                }
+            }
+
+            is Move.FreeCellToTableau -> {
+                // Get source and destination locations
+                val sourceLocation = CardLocation.Tableau<Source>(lastMove.toPileIndex)
+                val destLocation = CardLocation.FreeCell<nz.jnawk.freecell.Destination>(lastMove.fromCellIndex)
+
+                // Remove card from tableau pile
+                val toPile = gameState.tableauPiles[lastMove.toPileIndex]
+                toPile.removeAt(toPile.size - 1)
+
+                // Animate the card movement
+                animateCard(lastMove.card, sourceLocation, destLocation) {
+                    // Add card to free cell after animation completes
+                    gameState.freeCells[lastMove.fromCellIndex] = lastMove.card
+
+                    // Increment move counter for the undo action
+                    moveCount++
+
+                    // Complete the undo operation
+                    onComplete()
+                }
+            }
+
+            is Move.FreeCellToFoundation -> {
+                // Get source and destination locations
+                val sourceLocation = CardLocation.Foundation<Source>(lastMove.toFoundationSuit)
+                val destLocation = CardLocation.FreeCell<nz.jnawk.freecell.Destination>(lastMove.fromCellIndex)
+
+                // Remove card from foundation pile
+                val foundationPile = gameState.foundationPiles[lastMove.toFoundationSuit]!!
+                foundationPile.removeAt(foundationPile.size - 1)
+
+                // Animate the card movement
+                animateCard(lastMove.card, sourceLocation, destLocation) {
+                    // Add card to free cell after animation completes
+                    gameState.freeCells[lastMove.fromCellIndex] = lastMove.card
+
+                    // Increment move counter for the undo action
+                    moveCount++
+
+                    // Complete the undo operation
+                    onComplete()
+                }
+            }
+
+            is Move.FreeCellToFreeCell -> {
+                // Get source and destination locations
+                val sourceLocation = CardLocation.FreeCell<Source>(lastMove.toCellIndex)
+                val destLocation = CardLocation.FreeCell<nz.jnawk.freecell.Destination>(lastMove.fromCellIndex)
+
+                // Remove card from destination free cell
+                gameState.freeCells[lastMove.toCellIndex] = null
+
+                // Animate the card movement
+                animateCard(lastMove.card, sourceLocation, destLocation) {
+                    // Add card to source free cell after animation completes
+                    gameState.freeCells[lastMove.fromCellIndex] = lastMove.card
+
+                    // Increment move counter for the undo action
+                    moveCount++
+
+                    // Complete the undo operation
+                    onComplete()
+                }
+            }
+        }
+
+        return true
+    }
+
 
 
     /**
@@ -685,7 +837,7 @@ class FreecellGameEngine {
 
         return validDestinations
     }
-    
+
     /**
      * Find valid tableau destinations for the bottom card of a pile.
      * @param sourcePileIndex The index of the source tableau pile
@@ -778,25 +930,25 @@ class FreecellGameEngine {
     fun getCardsToMove(sourcePileIndex: Int, cardIndex: Int, maxLength: Int): List<Card> {
         val sourcePile = gameState.tableauPiles[sourcePileIndex]
         if (sourcePile.isEmpty() || cardIndex >= sourcePile.size) return emptyList()
-        
+
         // Get movable indices to determine possible sequences
         val movableIndices = getMovableCardIndices(sourcePileIndex)
-        
+
         // If the card is not part of a movable sequence, return just that card
         if (!movableIndices.contains(cardIndex)) {
             return listOf(sourcePile[cardIndex])
         }
-        
+
         // Get the indices from the specified card to the bottom of the pile
         val cardIndices = movableIndices.dropWhile { it < cardIndex }
-        
+
         // Limit to the maximum allowed length
         val limitedIndices = if (cardIndices.size > maxLength) {
             cardIndices.takeLast(maxLength)
         } else {
             cardIndices
         }
-        
+
         // Return the cards in the sequence
         return limitedIndices.map { sourcePile[it] }
     }
