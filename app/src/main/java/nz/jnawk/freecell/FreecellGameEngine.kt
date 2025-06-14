@@ -327,8 +327,8 @@ class FreecellGameEngine {
 
         // 2. Create a standard 52-card deck
         val deck = mutableListOf<Card>()
-        for (suit in Suit.values()) {
-            for (rank in Rank.values()) {
+        for (suit in Suit.entries) {
+            for (rank in Rank.entries) {
                 deck.add(Card(suit, rank))
             }
         }
@@ -342,7 +342,7 @@ class FreecellGameEngine {
         var cardIndex = 0
         for (pileIndex in 0 until 8) { // 8 tableau piles
             val cardsInThisPile = if (pileIndex < 4) 7 else 6
-            for (j in 0 until cardsInThisPile) {
+            repeat(cardsInThisPile) {
                 if (cardIndex < deck.size) { // Ensure we don't go out of bounds
                     gameState.tableauPiles[pileIndex].add(deck[cardIndex++])
                 }
